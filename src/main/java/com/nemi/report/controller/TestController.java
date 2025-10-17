@@ -17,7 +17,7 @@ public class TestController {
         return "Test service api successful-user manager";
     }
 
-    @GetMapping("/service-api/test2")
+    @GetMapping("/public-api/test2")
     public String testService2() {
         return "api test to update image";
     }
