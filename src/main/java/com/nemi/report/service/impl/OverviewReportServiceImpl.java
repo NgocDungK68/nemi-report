@@ -6,6 +6,7 @@ import com.nemi.report.model.request.OverviewReportRequest;
 import com.nemi.report.model.response.OverviewReportResponse;
 import com.nemi.report.repository.OrderRepository;
 import com.nemi.report.service.OverviewReportService;
+import com.nemi.report.util.ReportUtil;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.ObjectUtils;
 import org.springframework.stereotype.Service;
@@ -20,67 +21,88 @@ import java.util.Objects;
 @RequiredArgsConstructor
 public class OverviewReportServiceImpl implements OverviewReportService {
     private final OrderRepository orderRepository;
+    private final ReportUtil reportUtil;
 
     @Override
     public OverviewReportResponse getOverviewReport(OverviewReportRequest request) {
-        LocalDateTime from = request.getFrom().atStartOfDay();
-        LocalDateTime to = request.getTo().atTime(LocalTime.MAX);
-
-        return null;
-    }
-
-//    private OverviewReportResponse.RevenueData buildRevenueData(List<OrderEntity> orders) {
-//        BigDecimal revenue = orders.stream()
-//                .map(OrderEntity::getTotalPrice)
-//                .filter(Objects::nonNull)
-//                .reduce(BigDecimal.ZERO, BigDecimal::add);
-//
-//
-//        OverviewReportResponse.RevenueData data = OverviewReportResponse.RevenueData.builder()
-//                .revenue(revenue)
-//                .orders(BigDecimal.valueOf(orders.size()))
-//                .revenueChangePercent(BigDecimal.ZERO)
-//                .ordersChangePercent(BigDecimal.ZERO)
-//                .build();
-//
-//        return data;
-//    }
-
-
-    private BigDecimal getTotalRevenue(LocalDateTime from, LocalDateTime to) {
-        List<OrderEntity> totalOrders = orderRepository.findByCreatedAtBetween(from, to);
-        return totalOrders.stream()
-                .map(OrderEntity::getTotalPrice)
-                .filter(Objects::nonNull)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-    }
-
-    private BigDecimal getReturnedOrdersRevenue(LocalDateTime from, LocalDateTime to) {
-        List<String> returnedOrdersStatus = List.of(
+        List<String> returnOrdersStatus = List.of(
                 OrderStatus.RETURNED.getCode(),
                 OrderStatus.CANCELLED.getCode(),
                 OrderStatus.FAILED.getCode()
         );
 
-        List<OrderEntity> returnedOrders = orderRepository.findByStatusInAndCreatedAtBetween(returnedOrdersStatus, from, to);
-        return null;
-    }
-
-    private BigDecimal getConfirmedOrdersRevenue(LocalDateTime from, LocalDateTime to) {
-        List<String> confirmedOrdersStatus = List.of(
+        List<String> confirmedOrderStatus = List.of(
                 OrderStatus.DELIVERED.getCode(),
                 OrderStatus.SHIPPING.getCode(),
                 OrderStatus.READY_TO_SHIP.getCode()
         );
-        return null;
-    }
 
-    private BigDecimal getDeliveringOrdersRevenue(LocalDateTime from, LocalDateTime to) {
-        List<String> deliveringOrdersStatus = List.of(
+        List<String> deliveringOrderStatus = List.of(
                 OrderStatus.SHIPPING.getCode(),
                 OrderStatus.READY_TO_SHIP.getCode()
         );
-        return null;
+
+        return OverviewReportResponse.builder()
+                .totalRevenue(getRevenueData(request))
+                .returnedOrders(getOrderData(request, returnOrdersStatus))
+                .confirmedOrders(getOrderData(request, confirmedOrderStatus))
+                .deliveringOrders(getOrderData(request, deliveringOrderStatus))
+                .build();
+    }
+
+    private OverviewReportResponse.RevenueData getRevenueData(OverviewReportRequest request) {
+        LocalDateTime from = request.getFrom().atStartOfDay();
+        LocalDateTime to = request.getTo().atTime(LocalTime.MAX);
+        LocalDateTime compareFrom = from.minusDays(request.getCompareWith().getDays());
+        LocalDateTime compareTo = to.minusDays(request.getCompareWith().getDays());
+
+        List<OrderEntity> orders = orderRepository.findByCreatedAtBetween(from, to);
+        List<OrderEntity> ordersBefore = orderRepository.findByCreatedAtBetween(compareFrom, compareTo);
+
+        BigDecimal totalRevenue = getRevenue(orders);
+        BigDecimal totalRevenueBefore = getRevenue(ordersBefore);
+        BigDecimal totalOrders = BigDecimal.valueOf(orders.size());
+        BigDecimal totalOrdersBefore = BigDecimal.valueOf(ordersBefore.size());
+        BigDecimal revenueChangePercent = reportUtil.changePercent(totalRevenue, totalRevenueBefore);
+        BigDecimal ordersChangePercent = reportUtil.changePercent(totalOrders, totalOrdersBefore);
+
+        return OverviewReportResponse.RevenueData.builder()
+                .revenue(totalRevenue)
+                .revenueChangePercent(revenueChangePercent)
+                .orders(totalOrders)
+                .ordersChangePercent(ordersChangePercent)
+                .build();
+    }
+
+    private OverviewReportResponse.OrderData getOrderData(OverviewReportRequest request, List<String> orderStatus) {
+        LocalDateTime from = request.getFrom().atStartOfDay();
+        LocalDateTime to = request.getTo().atTime(LocalTime.MAX);
+        LocalDateTime compareFrom = from.minusDays(request.getCompareWith().getDays());
+        LocalDateTime compareTo = to.minusDays(request.getCompareWith().getDays());
+
+        List<OrderEntity> orders = orderRepository.findByStatusInAndCreatedAtBetween(orderStatus, from, to);
+        List<OrderEntity> ordersBefore = orderRepository.findByStatusInAndCreatedAtBetween(orderStatus, compareFrom, compareTo);
+
+        BigDecimal totalRevenue = getRevenue(orders);
+        BigDecimal totalRevenueBefore = getRevenue(ordersBefore);
+        BigDecimal totalOrders = BigDecimal.valueOf(orders.size());
+        BigDecimal totalOrdersBefore = BigDecimal.valueOf(ordersBefore.size());
+        BigDecimal revenueChangePercent = reportUtil.changePercent(totalRevenue, totalRevenueBefore);
+        BigDecimal ordersChangePercent = reportUtil.changePercent(totalOrders, totalOrdersBefore);
+
+        return OverviewReportResponse.OrderData.builder()
+                .revenue(getRevenue(orders))
+                .revenueChangePercent(revenueChangePercent)
+                .orders(totalOrders)
+                .ordersChangePercent(ordersChangePercent)
+                .build();
+    }
+
+    private BigDecimal getRevenue(List<OrderEntity> orders) {
+        return orders.stream()
+                .map(OrderEntity::getTotalPrice)
+                .filter(Objects::nonNull)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
     private BigDecimal getAdCost(LocalDateTime from, LocalDateTime to) {

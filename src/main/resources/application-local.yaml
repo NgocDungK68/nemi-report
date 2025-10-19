@@ -48,3 +48,9 @@ logging:
 management:
   server:
     port: 8082
+
+report:
+  scale:
+    change-percent: 2
+    amount: 4
+  exchange-rate: 26337
