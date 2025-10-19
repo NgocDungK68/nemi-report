@@ -1,11 +1,11 @@
 spring:
   application:
-    name: nemi-product-manager
+    name: nemi-report
   main:
     allow-bean-definition-overriding: true
   datasource:
     url: jdbc:postgresql://nemi-uat.cbwe2q8wsga5.ap-southeast-1.rds.amazonaws.com:5432/dev_nemi
-    username: dev_nemi_product_manager
+    username: dev_nemi_report
     password: Nemi123#
     driver-class-name: org.postgresql.Driver
     hikari:
@@ -48,3 +48,9 @@ logging:
 management:
   server:
     port: 8082
+
+report:
+  scale:
+    change-percent: 2
+    amount: 4
+  exchange-rate: 26337
