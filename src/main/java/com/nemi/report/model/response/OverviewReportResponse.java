@@ -1,11 +1,13 @@
 package com.nemi.report.model.response;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.Builder;
 import lombok.Data;
 
 import java.math.BigDecimal;
 
 @Data
+@Builder
 public class OverviewReportResponse {
 
     @JsonProperty("totalRevenue")
@@ -27,6 +29,7 @@ public class OverviewReportResponse {
     private ProfitData profit;
 
     @Data
+    @Builder
     public static class RevenueData {
         @JsonProperty("revenue")
         private BigDecimal revenue;
