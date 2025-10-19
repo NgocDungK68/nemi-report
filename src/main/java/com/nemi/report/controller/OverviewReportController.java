@@ -37,7 +37,7 @@ public class OverviewReportController {
     public ResponseEntity<OverviewReportResponse> getOverviewReport(
             @RequestParam("from") @DateTimeFormat(pattern = "dd/MM/yyyy") LocalDate from,
             @RequestParam("to") @DateTimeFormat(pattern = "dd/MM/yyyy") LocalDate to,
-            @RequestParam(value = "compareWith", required = false) List<CompareWithType> compareWith,
+            @RequestParam(value = "compareWith", required = false) CompareWithType compareWith,
             @RequestParam("currency") Currency currency) {
 
         // Create request object from parameters
