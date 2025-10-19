@@ -15,7 +15,7 @@ import java.math.BigDecimal;
 public class OverviewReportResponse {
 
     @JsonProperty("totalRevenue")
-    private RevenueData totalRevenue;
+    private OrderData totalRevenue;
 
     @JsonProperty("returnedOrders")
     private OrderData returnedOrders;
@@ -31,22 +31,6 @@ public class OverviewReportResponse {
 
     @JsonProperty("profit")
     private ProfitData profit;
-
-    @Data
-    @Builder
-    public static class RevenueData {
-        @JsonProperty("revenue")
-        private BigDecimal revenue;
-
-        @JsonProperty("revenueChangePercent")
-        private BigDecimal revenueChangePercent;
-
-        @JsonProperty("orders")
-        private BigDecimal orders;
-
-        @JsonProperty("ordersChangePercent")
-        private BigDecimal ordersChangePercent;
-    }
 
     @Data
     @Builder
