@@ -1,6 +1,7 @@
 package com.nemi.report.model.response;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.nemi.report.constant.ConfirmOrderWhen;
 import lombok.Data;
 
 import java.util.List;
@@ -9,8 +10,8 @@ import java.util.List;
 public class ConfigResponse {
 
     @JsonProperty("confirmOrderWhen")
-    private List<String> confirmOrderWhen;
+    private ConfirmOrderWhen confirmOrderWhen;
 
     @JsonProperty("returnOrderWhen")
-    private List<String> returnOrderWhen;
+    private ConfirmOrderWhen returnOrderWhen;
 }

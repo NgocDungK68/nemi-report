@@ -1,12 +1,18 @@
 package com.nemi.report.model.response;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.util.List;
 
 @Data
+@Builder
+@AllArgsConstructor
+@NoArgsConstructor
 public class BusinessTodayResponse {
 
     @JsonProperty("revenue")
@@ -19,21 +25,32 @@ public class BusinessTodayResponse {
     private BigDecimal adCostPerRevenue;
 
     @JsonProperty("confirmedOrder")
-    private BigDecimal confirmedOrder;
+    private OrderData confirmedOrder;
 
     @JsonProperty("deliveredOrder")
-    private BigDecimal deliveredOrder;
+    private OrderData deliveredOrder;
 
     @JsonProperty("pendingOrder")
-    private BigDecimal pendingOrder;
+    private OrderData pendingOrder;
 
     @JsonProperty("canceledOrder")
-    private BigDecimal canceledOrder;
+    private OrderData canceledOrder;
 
     @JsonProperty("revenuePerHourFrame")
     private List<HourFrameData> revenuePerHourFrame;
 
     @Data
+    @Builder
+    public static class OrderData {
+        @JsonProperty("revenue")
+        private BigDecimal revenue;
+
+        @JsonProperty("orders")
+        private BigDecimal orders;
+    }
+
+    @Data
+    @Builder
     public static class HourFrameData {
         @JsonProperty("hourFrame")
         private String hourFrame;
@@ -41,4 +58,6 @@ public class BusinessTodayResponse {
         @JsonProperty("value")
         private BigDecimal value;
     }
+
+
 }

@@ -21,7 +21,7 @@ public class CompareChartRequest {
     @JsonFormat(pattern = "dd/MM/yyyy")
     private LocalDate to;
 
-    private List<CompareWithType> compareWith; // L7D, L1M, L2M, L3M, LY
+    private CompareWithType compareWith; // L7D, L1M, L2M, L3M, LY
 
     @NotNull
     private Currency currency; // VND/USD

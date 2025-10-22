@@ -1,12 +1,18 @@
 package com.nemi.report.model.response;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.util.List;
 
 @Data
+@Builder
+@AllArgsConstructor
+@NoArgsConstructor
 public class CompareChartResponse {
 
     @JsonProperty("data")
@@ -16,6 +22,7 @@ public class CompareChartResponse {
     private String columnLegend;
 
     @Data
+    @Builder
     public static class ChartDataPoint {
         @JsonProperty("date")
         private String date; // dd/MM/yyyy

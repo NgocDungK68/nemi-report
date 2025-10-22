@@ -13,6 +13,7 @@ import com.nemi.report.model.response.OverviewReportResponse;
 import com.nemi.report.constant.CompareWithType;
 import com.nemi.report.constant.Currency;
 import com.nemi.report.constant.OverviewDataType;
+import com.nemi.report.service.impl.OverviewReportServiceImpl;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -32,6 +33,7 @@ import java.util.List;
 @RequestMapping("client-api/v1/report/overview")
 @RequiredArgsConstructor
 public class OverviewReportController {
+    private final OverviewReportServiceImpl overviewReportService;
 
     @GetMapping("/revenue")
     public ResponseEntity<OverviewReportResponse> getOverviewReport(
@@ -40,18 +42,13 @@ public class OverviewReportController {
             @RequestParam(value = "compareWith", required = false) CompareWithType compareWith,
             @RequestParam("currency") Currency currency) {
 
-        // Create request object from parameters
         OverviewReportRequest request = new OverviewReportRequest();
         request.setFrom(from);
         request.setTo(to);
         request.setCompareWith(compareWith);
         request.setCurrency(currency);
 
-        // TODO: Implement service call
-        // OverviewReportResponse response = overviewReportService.getOverviewReport(request);
-
-        // Temporary mock response
-        OverviewReportResponse response = new OverviewReportResponse();
+        OverviewReportResponse response = overviewReportService.getOverviewReport(request);
 
         return ResponseEntity.ok(response);
     }
@@ -60,7 +57,7 @@ public class OverviewReportController {
     public ResponseEntity<CompareChartResponse> getCompareChart(
             @RequestParam("from") @DateTimeFormat(pattern = "dd/MM/yyyy") LocalDate from,
             @RequestParam("to") @DateTimeFormat(pattern = "dd/MM/yyyy") LocalDate to,
-            @RequestParam(value = "compareWith", required = false) List<CompareWithType> compareWith,
+            @RequestParam(value = "compareWith", required = false) CompareWithType compareWith,
             @RequestParam("currency") Currency currency,
             @RequestParam("dataType") OverviewDataType dataType) {
 
@@ -131,20 +128,20 @@ public class OverviewReportController {
         // TODO: Implement service call
         // ConfigResponse response = configService.getConfig();
 
-        // Temporary mock response with example values from API spec
-        ConfigResponse response = new ConfigResponse();
-        response.setConfirmOrderWhen(Arrays.asList(
-                "update_status_to_new",
-                "update_status_to_confirm",
-                "move_to_transporter",
-                "reconciled"
-        ));
-        response.setReturnOrderWhen(Arrays.asList(
-                "return",
-                "returned"
-        ));
+//        // Temporary mock response with example values from API spec
+//        ConfigResponse response = new ConfigResponse();
+//        response.setConfirmOrderWhen(Arrays.asList(
+//                "update_status_to_new",
+//                "update_status_to_confirm",
+//                "move_to_transporter",
+//                "reconciled"
+//        ));
+//        response.setReturnOrderWhen(Arrays.asList(
+//                "return",
+//                "returned"
+//        ));
 
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(null);
     }
 
     @PutMapping("/config")

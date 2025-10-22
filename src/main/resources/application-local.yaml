@@ -35,6 +35,7 @@ logging:
   level:
     root: info
     org.apache: off
+    org.springframework.cache: DEBUG
   file:
     name: /tmp/log/nemi.log
   logback:
@@ -53,4 +54,18 @@ report:
   scale:
     change-percent: 2
     amount: 4
-  exchange-rate: 26337
+  date-pattern: "dd/MM/yy"
+  business-today:
+    hour-frame:
+      - [0, 2]
+      - [2, 4]
+      - [4, 6]
+      - [6, 8]
+      - [8, 10]
+      - [10, 12]
+      - [12, 14]
+      - [14, 16]
+      - [16, 18]
+      - [18, 20]
+      - [20, 22]
+      - [22, 24]
