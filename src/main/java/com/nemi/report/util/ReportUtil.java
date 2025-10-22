@@ -1,12 +1,14 @@
 package com.nemi.report.util;
 
 import com.nemi.report.configuration.ReportConfig;
+import com.nemi.report.constant.OrderStatus;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.ObjectUtils;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.List;
 
 @Component
 @RequiredArgsConstructor
@@ -38,13 +40,5 @@ public class ReportUtil {
                 .multiply(BigDecimal.valueOf(100));
 
         return percent.setScale(scale, RoundingMode.HALF_UP);  // Làm tròn 2 chữ số sau dấu phẩy
-    }
-
-    public BigDecimal convertToUSD(BigDecimal amountVND) {
-        return amountVND.divide(
-                reportConfig.getExchangeRate(),
-                reportConfig.getScale().getAmount(),
-                RoundingMode.HALF_UP
-        );
     }
 }
