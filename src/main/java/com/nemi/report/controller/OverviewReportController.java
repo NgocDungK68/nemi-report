@@ -1,33 +1,18 @@
 package com.nemi.report.controller;
 
-import com.nemi.report.model.request.BusinessTodayRequest;
-import com.nemi.report.model.request.CompareChartRequest;
-import com.nemi.report.model.request.MonthlyTargetRequest;
-import com.nemi.report.model.request.OverviewReportRequest;
-import com.nemi.report.model.request.UpdateMonthlyTargetRequest;
-import com.nemi.report.model.response.BusinessTodayResponse;
-import com.nemi.report.model.response.CompareChartResponse;
-import com.nemi.report.model.response.ConfigResponse;
-import com.nemi.report.model.response.MonthlyTargetResponse;
-import com.nemi.report.model.response.OverviewReportResponse;
 import com.nemi.report.constant.CompareWithType;
 import com.nemi.report.constant.Currency;
 import com.nemi.report.constant.OverviewDataType;
+import com.nemi.report.model.request.*;
+import com.nemi.report.model.response.*;
 import com.nemi.report.service.impl.OverviewReportServiceImpl;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
-import java.util.Arrays;
-import java.util.List;
 
 @RestController
 @RequestMapping("client-api/v1/report/overview")
