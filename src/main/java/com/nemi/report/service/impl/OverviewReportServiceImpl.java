@@ -4,11 +4,13 @@ import com.nemi.report.constant.OrderStatus;
 import com.nemi.report.entity.OrderEntity;
 import com.nemi.report.model.request.OverviewReportRequest;
 import com.nemi.report.model.request.ReportTimeRange;
+import com.nemi.report.model.response.ConfigResponse;
 import com.nemi.report.model.response.OverviewReportResponse;
 import com.nemi.report.model.response.RevenueSummary;
 import com.nemi.report.repository.OrderRepository;
+import com.nemi.report.service.ConfigService;
 import com.nemi.report.service.OverviewReportService;
-import com.nemi.report.util.ReportUtil;
+import com.nemi.report.util.ReportUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -24,13 +26,16 @@ import java.util.Objects;
 @Slf4j
 public class OverviewReportServiceImpl implements OverviewReportService {
     private final OrderRepository orderRepository;
-    private final ReportUtil reportUtil;
+    private final ReportUtils reportUtils;
+    private final ConfigService configService;
 
     @Override
     public OverviewReportResponse getOverviewReport(OverviewReportRequest request) {
+        ConfigResponse config = configService.getConfig();
+
         List<String> totalOrderStatus = OrderStatus.getTotalOrdersStatus();
-        List<String> returnedOrdersStatus = OrderStatus.getReturnedOrdersStatus();
-        List<String> confirmedOrderStatus = OrderStatus.getConfirmedOrdersStatus();
+        List<String> returnedOrdersStatus = config.getReturnOrderWhen().getOrderStatus();
+        List<String> confirmedOrderStatus = config.getConfirmOrderWhen().getOrderStatus();
         List<String> deliveringOrderStatus = OrderStatus.getDeliveringOrdersStatus();
 
         LocalDateTime from = request.getFrom().atStartOfDay();
@@ -72,8 +77,8 @@ public class OverviewReportServiceImpl implements OverviewReportService {
         BigDecimal totalRevenueBefore = orderBefore.getRevenue();
         BigDecimal totalOrders = order.getNumber();
         BigDecimal totalOrdersBefore = orderBefore.getNumber();
-        BigDecimal revenueChangePercent = reportUtil.changePercent(totalRevenue, totalRevenueBefore);
-        BigDecimal ordersChangePercent = reportUtil.changePercent(totalOrders, totalOrdersBefore);
+        BigDecimal revenueChangePercent = reportUtils.changePercent(totalRevenue, totalRevenueBefore);
+        BigDecimal ordersChangePercent = reportUtils.changePercent(totalOrders, totalOrdersBefore);
 
         return OverviewReportResponse.OrderData.builder()
                 .revenue(totalRevenue)
@@ -116,7 +121,11 @@ public class OverviewReportServiceImpl implements OverviewReportService {
         LocalDateTime from = period.getFrom();
         LocalDateTime to = period.getTo();
 
-        return null;
+        // TODO: code adCost
+        return RevenueSummary.builder()
+                .revenue(BigDecimal.ZERO)
+                .number(BigDecimal.ZERO)
+                .build();
     }
 
     private OverviewReportResponse.ProfitData getProfitData(ReportTimeRange currentPeriod,
@@ -126,7 +135,7 @@ public class OverviewReportServiceImpl implements OverviewReportService {
         BigDecimal profitValueBefore = getProfit(previousPeriod);
 
         // % thay đổi lợi nhuận
-        BigDecimal profitChangePercent = reportUtil.changePercent(profitValue, profitValueBefore);
+        BigDecimal profitChangePercent = reportUtils.changePercent(profitValue, profitValueBefore);
 
         return OverviewReportResponse.ProfitData.builder()
                 .value(profitValue)
@@ -136,11 +145,8 @@ public class OverviewReportServiceImpl implements OverviewReportService {
 
     private OverviewReportResponse.CostData getAdCostData(ReportTimeRange currentPeriod,
                                                           ReportTimeRange previousPeriod) {
+        // TODO: code CostData
         return null;
-    }
-
-    private BigDecimal getCostBefore() {
-        return BigDecimal.ZERO;
     }
 
     public BigDecimal getOrderRevenue(List<OrderEntity> orders) {

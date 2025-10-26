@@ -4,11 +4,10 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 import com.nemi.report.constant.CompareWithType;
 import com.nemi.report.constant.Currency;
 import com.nemi.report.constant.OverviewDataType;
+import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
-import jakarta.validation.constraints.NotNull;
 import java.time.LocalDate;
-import java.util.List;
 
 @Data
 public class CompareChartRequest {
