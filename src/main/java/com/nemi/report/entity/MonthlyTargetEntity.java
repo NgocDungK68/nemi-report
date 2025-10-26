@@ -1,6 +1,5 @@
 package com.nemi.report.entity;
 
-import com.nemi.util.ClaimUtil;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
