@@ -47,8 +47,8 @@ public class MonthlyTargetResponse {
     @JsonProperty("returnedOrder")
     private BigDecimal returnedOrder;
 
-    @JsonProperty("targetReturnedOrder")
-    private BigDecimal targetReturnedOrder;
+    @JsonProperty("returnedOrderPercent")
+    private BigDecimal returnedOrderPercent;
 
     @JsonProperty("targetReturnedOrderPercent")
     private BigDecimal targetReturnedOrderPercent;

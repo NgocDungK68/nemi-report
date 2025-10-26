@@ -53,8 +53,7 @@ management:
 report:
   scale:
     change-percent: 2
-    amount: 4
-  date-pattern: "dd/MM/yy"
+  date-pattern: "dd/MM/yyyy"
   business-today:
     hour-frame:
       - [0, 2]
@@ -69,3 +68,5 @@ report:
       - [18, 20]
       - [20, 22]
       - [22, 24]
+  compare-chart:
+    step-days: 1

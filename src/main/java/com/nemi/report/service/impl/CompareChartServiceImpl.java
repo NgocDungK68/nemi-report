@@ -8,9 +8,10 @@ import com.nemi.report.constant.OverviewDataType;
 import com.nemi.report.model.request.CompareChartRequest;
 import com.nemi.report.model.request.ReportTimeRange;
 import com.nemi.report.model.response.CompareChartResponse;
-import com.nemi.report.repository.OrderRepository;
+import com.nemi.report.model.response.ConfigResponse;
 import com.nemi.report.service.CompareChartService;
-import com.nemi.report.util.ReportUtil;
+import com.nemi.report.service.ConfigService;
+import com.nemi.report.util.ReportUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -25,28 +26,30 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 public class CompareChartServiceImpl implements CompareChartService {
-    private final ReportUtil reportUtil;
+    private final ReportUtils reportUtils;
     private final ReportConfig reportConfig;
-    private final OrderRepository orderRepository;
     private final OverviewReportServiceImpl overviewReportService;
+    private final ConfigService configService;
 
     @Override
     public CompareChartResponse getCompareChart(CompareChartRequest request) {
         List<CompareChartResponse.ChartDataPoint> dataList = new ArrayList<>();
+        ConfigResponse config = configService.getConfig();
 
-        for (LocalDate date = request.getFrom(); !date.isAfter(request.getTo()); date = date.plusDays(1)) {
+        for (LocalDate date = request.getFrom(); !date.isAfter(request.getTo()); date = date.plusDays(reportConfig.getCompareChart().getStepDays())) {
             LocalDate compareDate = date.minusDays(request.getCompareWith().getDays());
 
-            BigDecimal presentValue = getValueByDataType(date, request.getDataType());
-            BigDecimal previousValue = getValueByDataType(compareDate, request.getDataType());
-            BigDecimal changePercent = reportUtil.changePercent(presentValue, previousValue);
+            BigDecimal presentValue = getValueByDataType(date, request.getDataType(), config);
+            BigDecimal previousValue = getValueByDataType(compareDate, request.getDataType(), config);
+            BigDecimal changePercent = reportUtils.changePercent(presentValue, previousValue);
 
+            // TODO: code additions
             CompareChartResponse.ChartDataPoint item = CompareChartResponse.ChartDataPoint.builder()
                     .date(date.format(DateTimeFormatter.ofPattern(reportConfig.getDatePattern())))
                     .presentValue(presentValue)
                     .previousValue(previousValue)
                     .changePercent(changePercent)
-                    .additions(null)         // xu ly sau
+                    .additions(null)
                     .build();
 
             dataList.add(item);
@@ -58,26 +61,28 @@ public class CompareChartServiceImpl implements CompareChartService {
                 .build();
     }
 
-    private BigDecimal getValueByDataType(LocalDate date, OverviewDataType dataType) {
+    private BigDecimal getValueByDataType(LocalDate date, OverviewDataType dataType, ConfigResponse config) {
         LocalDateTime from = date.atStartOfDay();
         LocalDateTime to = date.atTime(LocalTime.MAX);
         ReportTimeRange timeRange = ReportTimeRange.of(from, to);
 
         return switch (dataType) {
-            case REVENUE -> overviewReportService.getOrderRevenue(orderRepository.findByUpdatedAtBetween(from, to));
-            case AD_COST, AD_COST_PER_REVENUE -> BigDecimal.ZERO;
-            case RETURNED_ORDER -> {
-                List<String> returnStatus = OrderStatus.getReturnedOrdersStatus();
-                yield overviewReportService.getOrderRevenue(orderRepository.findByStatusInAndUpdatedAtBetween(returnStatus, from, to));
-            }
-            case PROFIT -> overviewReportService.getProfit(timeRange);
+            case REVENUE ->
+                    overviewReportService.getOrderSummary(timeRange, OrderStatus.getTotalOrdersStatus()).getRevenue();
+            case AD_COST, AD_COST_PER_REVENUE ->
+                    BigDecimal.ZERO;
+            case RETURNED_ORDER ->
+                    overviewReportService.getOrderSummary(timeRange, config.getReturnOrderWhen().getOrderStatus()).getRevenue();
+            case PROFIT ->
+                    overviewReportService.getProfit(timeRange);
         };
     }
 
     private String getColumnLegend(OverviewDataType dataType, Currency currency) {
+        // TODO: code column legend
         return switch (dataType) {
             case AD_COST_PER_REVENUE -> ColumnLegend.PERCENT.getCode();
-            case REVENUE, AD_COST, PROFIT, RETURNED_ORDER -> currency.name();
+            case REVENUE, AD_COST, PROFIT, RETURNED_ORDER -> null;
         };
     }
 }

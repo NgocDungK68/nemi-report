@@ -10,7 +10,7 @@ import java.math.RoundingMode;
 
 @Component
 @RequiredArgsConstructor
-public class ReportUtil {
+public class ReportUtils {
     private final ReportConfig reportConfig;
 
     /**

@@ -131,12 +131,12 @@ public class OverviewReportController {
 
     @PutMapping("/config")
     public ResponseEntity<ConfigResponse> updateConfig(
-            @RequestBody ConfigResponse request) {
+            @RequestBody ConfigRequest request) {
 
         // TODO: Implement service call
         // ConfigResponse response = configService.updateConfig(request);
 
         // For now, return the same data that was sent
-        return ResponseEntity.ok(request);
+        return null;
     }
 }

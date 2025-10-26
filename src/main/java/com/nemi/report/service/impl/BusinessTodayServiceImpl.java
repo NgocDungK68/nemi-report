@@ -5,9 +5,10 @@ import com.nemi.report.constant.OrderStatus;
 import com.nemi.report.model.request.BusinessTodayRequest;
 import com.nemi.report.model.request.ReportTimeRange;
 import com.nemi.report.model.response.BusinessTodayResponse;
+import com.nemi.report.model.response.ConfigResponse;
 import com.nemi.report.model.response.RevenueSummary;
-import com.nemi.report.repository.OrderRepository;
 import com.nemi.report.service.BusinessTodayService;
+import com.nemi.report.service.ConfigService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -20,13 +21,14 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 public class BusinessTodayServiceImpl implements BusinessTodayService {
-    private final OrderRepository orderRepository;
     private final ReportConfig reportConfig;
     private final OverviewReportServiceImpl overviewReportService;
+    private final ConfigService configService;
 
     @Override
     public BusinessTodayResponse getBusinessToday(BusinessTodayRequest request) {
         ReportTimeRange timeToday = ReportTimeRange.today();
+        ConfigResponse config = configService.getConfig();
 
         // Doanh số hôm nay
         BusinessTodayResponse.OrderData totalOrders = convertToOrderData(
@@ -39,7 +41,7 @@ public class BusinessTodayServiceImpl implements BusinessTodayService {
 
         // order
         BusinessTodayResponse.OrderData confirmedOrder = convertToOrderData(
-                overviewReportService.getOrderSummary(timeToday, OrderStatus.getConfirmedOrdersStatus())
+                overviewReportService.getOrderSummary(timeToday, config.getConfirmOrderWhen().getOrderStatus())
         );
         BusinessTodayResponse.OrderData deliveredOrder = convertToOrderData(
                 overviewReportService.getOrderSummary(timeToday, OrderStatus.getDeliveringOrdersStatus())
@@ -60,7 +62,10 @@ public class BusinessTodayServiceImpl implements BusinessTodayService {
             int endHour = frame.get(1);
             LocalDateTime from = startOfDay.plusHours(startHour);
             LocalDateTime to = startOfDay.plusHours(endHour);
-            BigDecimal frameRevenue = overviewReportService.getOrderRevenue(orderRepository.findByUpdatedAtBetween(from, to));
+            ReportTimeRange period = ReportTimeRange.of(from, to);
+            BigDecimal frameRevenue = overviewReportService
+                    .getOrderSummary(period, OrderStatus.getTotalOrdersStatus())
+                    .getRevenue();
 
             revenueFrames.add(
                     BusinessTodayResponse.HourFrameData.builder()
