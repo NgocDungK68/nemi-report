@@ -4,11 +4,10 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 import com.nemi.report.constant.CompareWithType;
 import com.nemi.report.constant.Currency;
 import com.nemi.report.constant.OverviewDataType;
+import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
-import jakarta.validation.constraints.NotNull;
 import java.time.LocalDate;
-import java.util.List;
 
 @Data
 public class CompareChartRequest {
@@ -21,7 +20,7 @@ public class CompareChartRequest {
     @JsonFormat(pattern = "dd/MM/yyyy")
     private LocalDate to;
 
-    private List<CompareWithType> compareWith; // L7D, L1M, L2M, L3M, LY
+    private CompareWithType compareWith; // L7D, L1M, L2M, L3M, LY
 
     @NotNull
     private Currency currency; // VND/USD

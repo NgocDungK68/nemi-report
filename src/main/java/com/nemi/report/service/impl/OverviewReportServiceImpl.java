@@ -3,10 +3,14 @@ package com.nemi.report.service.impl;
 import com.nemi.report.constant.OrderStatus;
 import com.nemi.report.entity.OrderEntity;
 import com.nemi.report.model.request.OverviewReportRequest;
+import com.nemi.report.model.request.ReportTimeRange;
+import com.nemi.report.model.response.ConfigResponse;
 import com.nemi.report.model.response.OverviewReportResponse;
+import com.nemi.report.model.response.RevenueSummary;
 import com.nemi.report.repository.OrderRepository;
+import com.nemi.report.service.ConfigService;
 import com.nemi.report.service.OverviewReportService;
-import com.nemi.report.util.ReportUtil;
+import com.nemi.report.util.ReportUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -22,52 +26,32 @@ import java.util.Objects;
 @Slf4j
 public class OverviewReportServiceImpl implements OverviewReportService {
     private final OrderRepository orderRepository;
-    private final ReportUtil reportUtil;
+    private final ReportUtils reportUtils;
+    private final ConfigService configService;
 
     @Override
     public OverviewReportResponse getOverviewReport(OverviewReportRequest request) {
-        List<String> returnOrdersStatus = List.of(
-                OrderStatus.RETURNED.getCode(),
-                OrderStatus.CANCELLED.getCode(),
-                OrderStatus.FAILED.getCode()
-        );
+        ConfigResponse config = configService.getConfig();
 
-        List<String> confirmedOrderStatus = List.of(
-                OrderStatus.DELIVERED.getCode(),
-                OrderStatus.SHIPPING.getCode(),
-                OrderStatus.READY_TO_SHIP.getCode()
-        );
-
-        List<String> deliveringOrderStatus = List.of(
-                OrderStatus.SHIPPING.getCode(),
-                OrderStatus.READY_TO_SHIP.getCode()
-        );
+        List<String> totalOrderStatus = OrderStatus.getTotalOrdersStatus();
+        List<String> returnedOrdersStatus = config.getReturnOrderWhen().getOrderStatus();
+        List<String> confirmedOrderStatus = config.getConfirmOrderWhen().getOrderStatus();
+        List<String> deliveringOrderStatus = OrderStatus.getDeliveringOrdersStatus();
 
         LocalDateTime from = request.getFrom().atStartOfDay();
         LocalDateTime to = request.getTo().atTime(LocalTime.MAX);
         LocalDateTime compareFrom = from.minusDays(request.getCompareWith().getDays());
         LocalDateTime compareTo = to.minusDays(request.getCompareWith().getDays());
+        ReportTimeRange currentPeriod = ReportTimeRange.of(from, to);
+        ReportTimeRange previousPeriod = ReportTimeRange.of(compareFrom, compareTo);
 
         try {
-            List<OrderEntity> orders = orderRepository.findByCreatedAtBetween(from, to);
-            List<OrderEntity> ordersBefore = orderRepository.findByCreatedAtBetween(compareFrom, compareTo);
-            List<OrderEntity> returnedOrders = orderRepository.findByStatusInAndCreatedAtBetween(returnOrdersStatus, from, to);
-            List<OrderEntity> returnedOrdersBefore = orderRepository.findByStatusInAndCreatedAtBetween(returnOrdersStatus, compareFrom, compareTo);
-            List<OrderEntity> confirmedOrders = orderRepository.findByStatusInAndCreatedAtBetween(confirmedOrderStatus, from, to);
-            List<OrderEntity> confirmedOrdersBefore = orderRepository.findByStatusInAndCreatedAtBetween(confirmedOrderStatus, compareFrom, compareTo);
-            List<OrderEntity> deliveringOrders = orderRepository.findByStatusInAndCreatedAtBetween(deliveringOrderStatus, from, to);
-            List<OrderEntity> deliveringOrdersBefore = orderRepository.findByStatusInAndCreatedAtBetween(deliveringOrderStatus, compareFrom, compareTo);
-
-            OverviewReportResponse.OrderData totalRevenueData = getOrderData(orders, ordersBefore);
-            OverviewReportResponse.OrderData returnedOrdersData = getOrderData(returnedOrders, returnedOrdersBefore);
-            OverviewReportResponse.OrderData confirmedOrdersData = getOrderData(confirmedOrders, confirmedOrdersBefore);
-            OverviewReportResponse.OrderData deliveringOrdersData = getOrderData(deliveringOrders, deliveringOrdersBefore);
-            OverviewReportResponse.CostData adCostData = getAdCostData();
-            OverviewReportResponse.ProfitData profitData = getProfitData(
-                    totalRevenueData.getRevenue(), getRevenue(ordersBefore),
-                    returnedOrdersData.getRevenue(), getRevenue(returnedOrdersBefore),
-                    adCostData.getCost(), getCostBefore()
-            );
+            OverviewReportResponse.OrderData totalRevenueData = getOrderData(currentPeriod, previousPeriod, totalOrderStatus);
+            OverviewReportResponse.OrderData returnedOrdersData = getOrderData(currentPeriod, previousPeriod, returnedOrdersStatus);
+            OverviewReportResponse.OrderData confirmedOrdersData = getOrderData(currentPeriod, previousPeriod, confirmedOrderStatus);
+            OverviewReportResponse.OrderData deliveringOrdersData = getOrderData(currentPeriod, previousPeriod, deliveringOrderStatus);
+            OverviewReportResponse.CostData adCostData = getAdCostData(currentPeriod, previousPeriod);
+            OverviewReportResponse.ProfitData profitData = getProfitData(currentPeriod, previousPeriod);
 
             return OverviewReportResponse.builder()
                     .totalRevenue(totalRevenueData)
@@ -83,16 +67,21 @@ public class OverviewReportServiceImpl implements OverviewReportService {
         }
     }
 
-    private OverviewReportResponse.OrderData getOrderData(List<OrderEntity> orders, List<OrderEntity> ordersBefore) {
-        BigDecimal totalRevenue = getRevenue(orders);
-        BigDecimal totalRevenueBefore = getRevenue(ordersBefore);
-        BigDecimal totalOrders = BigDecimal.valueOf(orders.size());
-        BigDecimal totalOrdersBefore = BigDecimal.valueOf(ordersBefore.size());
-        BigDecimal revenueChangePercent = reportUtil.changePercent(totalRevenue, totalRevenueBefore);
-        BigDecimal ordersChangePercent = reportUtil.changePercent(totalOrders, totalOrdersBefore);
+    private OverviewReportResponse.OrderData getOrderData(ReportTimeRange currentPeriod,
+                                                          ReportTimeRange previousPeriod,
+                                                          List<String> orderStatus) {
+        RevenueSummary order = getOrderSummary(currentPeriod, orderStatus);
+        RevenueSummary orderBefore = getOrderSummary(previousPeriod, orderStatus);
+
+        BigDecimal totalRevenue = order.getRevenue();
+        BigDecimal totalRevenueBefore = orderBefore.getRevenue();
+        BigDecimal totalOrders = order.getNumber();
+        BigDecimal totalOrdersBefore = orderBefore.getNumber();
+        BigDecimal revenueChangePercent = reportUtils.changePercent(totalRevenue, totalRevenueBefore);
+        BigDecimal ordersChangePercent = reportUtils.changePercent(totalOrders, totalOrdersBefore);
 
         return OverviewReportResponse.OrderData.builder()
-                .revenue(getRevenue(orders))
+                .revenue(totalRevenue)
                 .revenueChangePercent(revenueChangePercent)
                 .orders(totalOrders)
                 .ordersChangePercent(ordersChangePercent)
@@ -100,17 +89,53 @@ public class OverviewReportServiceImpl implements OverviewReportService {
     }
 
     /**
-     * Lợi Nhuận = Doanh số - ( chi phí ads + Doanh số đơn hoàn )
+     * Hàm trả về doanh thu và số lượng orders
      */
-    private OverviewReportResponse.ProfitData getProfitData(BigDecimal totalRevenue, BigDecimal totalRevenueBefore,
-                                                            BigDecimal returnedOrdersRevenue, BigDecimal returnedOrdersRevenueBefore,
-                                                            BigDecimal adCost, BigDecimal adCostBefore) {
+    public RevenueSummary getOrderSummary(ReportTimeRange period, List<String> orderStatus) {
+        LocalDateTime from = period.getFrom();
+        LocalDateTime to = period.getTo();
+        List<OrderEntity> orders = orderRepository.findByStatusInAndUpdatedAtBetween(orderStatus, from, to);
+
+        return RevenueSummary.builder()
+                .revenue(getOrderRevenue(orders))
+                .number(BigDecimal.valueOf(orders.size()))
+                .build();
+    }
+
+    public BigDecimal getProfit(ReportTimeRange period) {
+        RevenueSummary revenueSummary = getOrderSummary(period, OrderStatus.getTotalOrdersStatus());
+        RevenueSummary returnedOrdersSummary = getOrderSummary(period, OrderStatus.getReturnedOrdersStatus());
+        RevenueSummary adsSummary = getAdsSummary(period);
+
+        return revenueSummary.getNumber().subtract(
+                adsSummary.getNumber().add(
+                        returnedOrdersSummary.getNumber()
+                )
+        );
+    }
+
+    /**
+     * Lấy doanh thu và số lượng ads (chưa xử lý)
+     */
+    public RevenueSummary getAdsSummary(ReportTimeRange period) {
+        LocalDateTime from = period.getFrom();
+        LocalDateTime to = period.getTo();
+
+        // TODO: code adCost
+        return RevenueSummary.builder()
+                .revenue(BigDecimal.ZERO)
+                .number(BigDecimal.ZERO)
+                .build();
+    }
+
+    private OverviewReportResponse.ProfitData getProfitData(ReportTimeRange currentPeriod,
+                                                            ReportTimeRange previousPeriod) {
         // Lợi nhuận hiện tại & trước đó
-        BigDecimal profitValue = totalRevenue.subtract(returnedOrdersRevenue.add(adCost));
-        BigDecimal profitValueBefore = totalRevenueBefore.subtract(returnedOrdersRevenueBefore.add(adCostBefore));
+        BigDecimal profitValue = getProfit(currentPeriod);
+        BigDecimal profitValueBefore = getProfit(previousPeriod);
 
         // % thay đổi lợi nhuận
-        BigDecimal profitChangePercent = reportUtil.changePercent(profitValue, profitValueBefore);
+        BigDecimal profitChangePercent = reportUtils.changePercent(profitValue, profitValueBefore);
 
         return OverviewReportResponse.ProfitData.builder()
                 .value(profitValue)
@@ -118,15 +143,13 @@ public class OverviewReportServiceImpl implements OverviewReportService {
                 .build();
     }
 
-    private OverviewReportResponse.CostData getAdCostData() {
+    private OverviewReportResponse.CostData getAdCostData(ReportTimeRange currentPeriod,
+                                                          ReportTimeRange previousPeriod) {
+        // TODO: code CostData
         return null;
     }
 
-    private BigDecimal getCostBefore() {
-        return BigDecimal.ZERO;
-    }
-
-    private BigDecimal getRevenue(List<OrderEntity> orders) {
+    public BigDecimal getOrderRevenue(List<OrderEntity> orders) {
         return orders.stream()
                 .map(OrderEntity::getTotalPrice)
                 .filter(Objects::nonNull)

@@ -10,7 +10,7 @@ import java.math.RoundingMode;
 
 @Component
 @RequiredArgsConstructor
-public class ReportUtil {
+public class ReportUtils {
     private final ReportConfig reportConfig;
 
     /**
@@ -38,13 +38,5 @@ public class ReportUtil {
                 .multiply(BigDecimal.valueOf(100));
 
         return percent.setScale(scale, RoundingMode.HALF_UP);  // Làm tròn 2 chữ số sau dấu phẩy
-    }
-
-    public BigDecimal convertToUSD(BigDecimal amountVND) {
-        return amountVND.divide(
-                reportConfig.getExchangeRate(),
-                reportConfig.getScale().getAmount(),
-                RoundingMode.HALF_UP
-        );
     }
 }
