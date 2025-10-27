@@ -41,6 +41,8 @@ public class BusinessTodayResponse {
 
     @Data
     @Builder
+    @AllArgsConstructor
+    @NoArgsConstructor
     public static class OrderData {
         @JsonProperty("revenue")
         private BigDecimal revenue;
@@ -51,6 +53,8 @@ public class BusinessTodayResponse {
 
     @Data
     @Builder
+    @AllArgsConstructor
+    @NoArgsConstructor
     public static class HourFrameData {
         @JsonProperty("hourFrame")
         private String hourFrame;

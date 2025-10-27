@@ -48,8 +48,6 @@ public class ConfigServiceImpl implements ConfigService {
         reportSetting.setReturnOrderWhen(request.getReturnOrderWhen().getCode());
         reportSetting.setUpdatedTime(LocalDateTime.now());
 
-        // TODO: call lại toàn bộ hàm trong overviewReport?
-
         return ConfigResponse.builder()
                 .confirmOrderWhen(request.getConfirmOrderWhen())
                 .returnOrderWhen(request.getReturnOrderWhen())
