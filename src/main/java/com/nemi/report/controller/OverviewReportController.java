@@ -1,10 +1,9 @@
 package com.nemi.report.controller;
 
-import com.nemi.report.constant.CompareWithType;
-import com.nemi.report.constant.Currency;
-import com.nemi.report.constant.OverviewDataType;
+import com.nemi.report.constant.*;
 import com.nemi.report.model.request.*;
 import com.nemi.report.model.response.*;
+import com.nemi.report.service.CompareChartService;
 import com.nemi.report.service.impl.OverviewReportServiceImpl;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -13,12 +12,14 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.util.List;
 
 @RestController
 @RequestMapping("client-api/v1/report/overview")
 @RequiredArgsConstructor
 public class OverviewReportController {
     private final OverviewReportServiceImpl overviewReportService;
+    private final CompareChartService compareChartService;
 
     @GetMapping("/revenue")
     public ResponseEntity<OverviewReportResponse> getOverviewReport(
@@ -33,8 +34,17 @@ public class OverviewReportController {
         request.setCompareWith(compareWith);
         request.setCurrency(currency);
 
-        OverviewReportResponse response = overviewReportService.getOverviewReport(request);
+        // TODO: Implement service call
+        // OverviewReportResponse response = overviewReportService.getOverviewReport(request);
 
+        OverviewReportResponse response = OverviewReportResponse.builder()
+                .totalRevenue(new OverviewReportResponse.OrderData())
+                .returnedOrders(new OverviewReportResponse.OrderData())
+                .confirmedOrders(new OverviewReportResponse.OrderData())
+                .deliveringOrders(new OverviewReportResponse.OrderData())
+                .adCost(new OverviewReportResponse.CostData())
+                .profit(new OverviewReportResponse.ProfitData())
+                .build();
         return ResponseEntity.ok(response);
     }
 
@@ -55,10 +65,15 @@ public class OverviewReportController {
         request.setDataType(dataType);
 
         // TODO: Implement service call
-        // CompareChartResponse response = compareChartService.getCompareChart(request);
+//         CompareChartResponse response = compareChartService.getCompareChart(request);
 
         // Temporary mock response
-        CompareChartResponse response = new CompareChartResponse();
+        CompareChartResponse response = CompareChartResponse.builder()
+                .data(List.of(CompareChartResponse.ChartDataPoint.builder()
+                        .additions(List.of(new CompareChartResponse.Addition()))
+                        .build()))
+                .columnLegend(null)
+                .build();
 
         return ResponseEntity.ok(response);
     }
@@ -75,7 +90,12 @@ public class OverviewReportController {
         // BusinessTodayResponse response = businessTodayService.getBusinessToday(request);
 
         // Temporary mock response
-        BusinessTodayResponse response = new BusinessTodayResponse();
+        BusinessTodayResponse response = BusinessTodayResponse.builder()
+                .confirmedOrder(new BusinessTodayResponse.OrderData())
+                .deliveredOrder(new BusinessTodayResponse.OrderData())
+                .pendingOrder(new BusinessTodayResponse.OrderData())
+                .revenuePerHourFrame(List.of(new BusinessTodayResponse.HourFrameData()))
+                .build();
 
         return ResponseEntity.ok(response);
     }
@@ -113,20 +133,12 @@ public class OverviewReportController {
         // TODO: Implement service call
         // ConfigResponse response = configService.getConfig();
 
-//        // Temporary mock response with example values from API spec
-//        ConfigResponse response = new ConfigResponse();
-//        response.setConfirmOrderWhen(Arrays.asList(
-//                "update_status_to_new",
-//                "update_status_to_confirm",
-//                "move_to_transporter",
-//                "reconciled"
-//        ));
-//        response.setReturnOrderWhen(Arrays.asList(
-//                "return",
-//                "returned"
-//        ));
+        // Temporary mock response with example values from API spec
+        ConfigResponse response = new ConfigResponse();
+        response.setConfirmOrderWhen(ConfirmOrderWhen.UPDATE_STATUS_TO_CONFIRM);
+        response.setReturnOrderWhen(ReturnOrderWhen.RETURNED);
 
-        return ResponseEntity.ok(null);
+        return ResponseEntity.ok(response);
     }
 
     @PutMapping("/config")
@@ -137,6 +149,10 @@ public class OverviewReportController {
         // ConfigResponse response = configService.updateConfig(request);
 
         // For now, return the same data that was sent
-        return null;
+        ConfigResponse response = new ConfigResponse();
+        response.setConfirmOrderWhen(request.getConfirmOrderWhen());
+        response.setReturnOrderWhen(request.getReturnOrderWhen());
+
+        return ResponseEntity.ok(response);
     }
 }
