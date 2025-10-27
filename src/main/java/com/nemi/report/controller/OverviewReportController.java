@@ -65,7 +65,7 @@ public class OverviewReportController {
         request.setDataType(dataType);
 
         // TODO: Implement service call
-//         CompareChartResponse response = compareChartService.getCompareChart(request);
+        // CompareChartResponse response = compareChartService.getCompareChart(request);
 
         // Temporary mock response
         CompareChartResponse response = CompareChartResponse.builder()

@@ -47,6 +47,7 @@ public class ConfigServiceImpl implements ConfigService {
         reportSetting.setConfirmOrderWhen(request.getConfirmOrderWhen().getCode());
         reportSetting.setReturnOrderWhen(request.getReturnOrderWhen().getCode());
         reportSetting.setUpdatedTime(LocalDateTime.now());
+        reportSettingRepository.save(reportSetting);
 
         return ConfigResponse.builder()
                 .confirmOrderWhen(request.getConfirmOrderWhen())
