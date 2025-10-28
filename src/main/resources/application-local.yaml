@@ -35,7 +35,8 @@ logging:
   level:
     root: info
     org.apache: off
-    org.springframework.cache: DEBUG
+    com:
+      nemi: debug
   file:
     name: /tmp/log/nemi.log
   logback:
@@ -52,7 +53,8 @@ management:
 
 report:
   scale:
-    change-percent: 2
+    revenue: 0
+    percent: 2
   date-pattern: "dd/MM/yyyy"
   business-today:
     hour-frame:

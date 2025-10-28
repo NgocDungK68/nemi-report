@@ -10,6 +10,7 @@ import com.nemi.report.model.response.RevenueSummary;
 import com.nemi.report.service.BusinessTodayService;
 import com.nemi.report.service.ConfigService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -20,6 +21,7 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class BusinessTodayServiceImpl implements BusinessTodayService {
     private final ReportConfig reportConfig;
     private final OverviewReportServiceImpl overviewReportService;
@@ -27,64 +29,76 @@ public class BusinessTodayServiceImpl implements BusinessTodayService {
 
     @Override
     public BusinessTodayResponse getBusinessToday(BusinessTodayRequest request) {
-        ReportTimeRange timeToday = ReportTimeRange.today();
-        ConfigResponse config = configService.getConfig();
+        log.info("[BusinessTodayServiceImpl.getBusinessToday] Start generating today's business report with currency: {}", request.getCurrency());
 
-        // Doanh số hôm nay
-        BusinessTodayResponse.OrderData totalOrders = convertToOrderData(
-                overviewReportService.getOrderSummary(timeToday, OrderStatus.getTotalOrdersStatus())
-        );
+        try {
+            ReportTimeRange timeToday = ReportTimeRange.today();
+            ConfigResponse config = configService.getConfig();
 
-        // ads
-        BigDecimal adCost = overviewReportService.getAdsSummary(timeToday).getRevenue();
-        BigDecimal adCostPerRevenue = overviewReportService.getAdsSummary(timeToday).getNumber();
-
-        // order
-        BusinessTodayResponse.OrderData confirmedOrder = convertToOrderData(
-                overviewReportService.getOrderSummary(timeToday, config.getConfirmOrderWhen().getOrderStatus())
-        );
-        BusinessTodayResponse.OrderData deliveredOrder = convertToOrderData(
-                overviewReportService.getOrderSummary(timeToday, OrderStatus.getDeliveringOrdersStatus())
-        );
-        BusinessTodayResponse.OrderData canceledOrder = convertToOrderData(
-                overviewReportService.getOrderSummary(timeToday, OrderStatus.getCancelledOrdersStatus())
-        );
-        BusinessTodayResponse.OrderData pendingOrder = BusinessTodayResponse.OrderData.builder()
-                .revenue(totalOrders.getRevenue().subtract(deliveredOrder.getRevenue()))
-                .orders(totalOrders.getOrders().subtract(canceledOrder.getOrders()))
-                .build();
-
-        // Doanh thu theo khung giờ linh hoạt
-        List<BusinessTodayResponse.HourFrameData> revenueFrames = new ArrayList<>();
-        LocalDateTime startOfDay = LocalDate.now().atStartOfDay();
-        for (List<Integer> frame : reportConfig.getBusinessToday().getHourFrame()) {
-            int startHour = frame.get(0);
-            int endHour = frame.get(1);
-            LocalDateTime from = startOfDay.plusHours(startHour);
-            LocalDateTime to = startOfDay.plusHours(endHour);
-            ReportTimeRange period = ReportTimeRange.of(from, to);
-            BigDecimal frameRevenue = overviewReportService
-                    .getOrderSummary(period, OrderStatus.getTotalOrdersStatus())
-                    .getRevenue();
-
-            revenueFrames.add(
-                    BusinessTodayResponse.HourFrameData.builder()
-                            .hourFrame(startHour + "-" + endHour)
-                            .value(frameRevenue)
-                            .build()
+            // Doanh số hôm nay
+            BusinessTodayResponse.OrderData totalOrders = convertToOrderData(
+                    overviewReportService.getOrderSummary(timeToday, OrderStatus.getTotalOrdersStatus())
             );
-        }
 
-        return BusinessTodayResponse.builder()
-                .revenue(totalOrders.getRevenue())
-                .adCost(adCost)
-                .adCostPerRevenue(adCostPerRevenue)
-                .confirmedOrder(confirmedOrder)
-                .deliveredOrder(deliveredOrder)
-                .pendingOrder(pendingOrder)
-                .canceledOrder(canceledOrder)
-                .revenuePerHourFrame(revenueFrames)
-                .build();
+            // ads
+            BigDecimal adCost = overviewReportService.getAdsSummary(timeToday).getRevenue();
+            BigDecimal adCostPerRevenue = overviewReportService.getAdsSummary(timeToday).getNumber();
+
+            // order
+            BusinessTodayResponse.OrderData confirmedOrder = convertToOrderData(
+                    overviewReportService.getOrderSummary(timeToday, config.getConfirmOrderWhen().getOrderStatus())
+            );
+            BusinessTodayResponse.OrderData deliveredOrder = convertToOrderData(
+                    overviewReportService.getOrderSummary(timeToday, OrderStatus.getDeliveringOrdersStatus())
+            );
+            BusinessTodayResponse.OrderData canceledOrder = convertToOrderData(
+                    overviewReportService.getOrderSummary(timeToday, OrderStatus.getCancelledOrdersStatus())
+            );
+            BusinessTodayResponse.OrderData pendingOrder = BusinessTodayResponse.OrderData.builder()
+                    .revenue(totalOrders.getRevenue().subtract(deliveredOrder.getRevenue()))
+                    .orders(totalOrders.getOrders().subtract(canceledOrder.getOrders()))
+                    .build();
+
+            // Doanh thu theo khung giờ linh hoạt
+            List<BusinessTodayResponse.HourFrameData> revenueFrames = new ArrayList<>();
+            LocalDateTime startOfDay = LocalDate.now().atStartOfDay();
+            for (List<Integer> frame : reportConfig.getBusinessToday().getHourFrame()) {
+                int startHour = frame.get(0);
+                int endHour = frame.get(1);
+                LocalDateTime from = startOfDay.plusHours(startHour);
+                LocalDateTime to = startOfDay.plusHours(endHour);
+                ReportTimeRange period = ReportTimeRange.of(from, to);
+                BigDecimal frameRevenue = overviewReportService
+                        .getOrderSummary(period, OrderStatus.getTotalOrdersStatus())
+                        .getRevenue();
+
+                log.debug("[BusinessTodayServiceImpl.getBusinessToday] Hour frame {}-{}: revenue={}", startHour, endHour, frameRevenue);
+
+                revenueFrames.add(
+                        BusinessTodayResponse.HourFrameData.builder()
+                                .hourFrame(startHour + "-" + endHour)
+                                .value(frameRevenue)
+                                .build()
+                );
+            }
+
+            BusinessTodayResponse response = BusinessTodayResponse.builder()
+                    .revenue(totalOrders.getRevenue())
+                    .adCost(adCost)
+                    .adCostPerRevenue(adCostPerRevenue)
+                    .confirmedOrder(confirmedOrder)
+                    .deliveredOrder(deliveredOrder)
+                    .pendingOrder(pendingOrder)
+                    .canceledOrder(canceledOrder)
+                    .revenuePerHourFrame(revenueFrames)
+                    .build();
+
+            log.info("[BusinessTodayServiceImpl.getBusinessToday] Successfully built today's business report");
+            return response;
+        } catch (Exception e) {
+            log.error("[BusinessTodayServiceImpl.getBusinessToday] Failed to generate today's business report: {}", e.getMessage(), e);
+            throw new RuntimeException(e);
+        }
     }
 
     private BusinessTodayResponse.OrderData convertToOrderData(RevenueSummary revenueSummary) {

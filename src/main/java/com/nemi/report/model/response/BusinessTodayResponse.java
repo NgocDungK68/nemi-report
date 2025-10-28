@@ -62,6 +62,4 @@ public class BusinessTodayResponse {
         @JsonProperty("value")
         private BigDecimal value;
     }
-
-
 }
