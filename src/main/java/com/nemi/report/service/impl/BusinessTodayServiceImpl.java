@@ -1,7 +1,10 @@
 package com.nemi.report.service.impl;
 
+import com.nemi.exception.TechnicalException;
+import com.nemi.exception.pojo.AlertMessages;
 import com.nemi.report.configuration.ReportConfig;
 import com.nemi.report.constant.OrderStatus;
+import com.nemi.report.exception.TechnicalAlertCode;
 import com.nemi.report.model.request.BusinessTodayRequest;
 import com.nemi.report.model.request.ReportTimeRange;
 import com.nemi.report.model.response.BusinessTodayResponse;
@@ -97,7 +100,7 @@ public class BusinessTodayServiceImpl implements BusinessTodayService {
             return response;
         } catch (Exception e) {
             log.error("[BusinessTodayServiceImpl.getBusinessToday] Failed to generate today's business report: {}", e.getMessage(), e);
-            throw new RuntimeException(e);
+            throw new TechnicalException(AlertMessages.alert(TechnicalAlertCode.BUSINESS_TODAY_REPORT_ERROR));
         }
     }
 

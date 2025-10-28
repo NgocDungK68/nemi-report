@@ -1,8 +1,11 @@
 package com.nemi.report.service.impl;
 
+import com.nemi.exception.TechnicalException;
+import com.nemi.exception.pojo.AlertMessages;
 import com.nemi.report.configuration.ReportConfig;
 import com.nemi.report.constant.OrderStatus;
 import com.nemi.report.entity.OrderEntity;
+import com.nemi.report.exception.TechnicalAlertCode;
 import com.nemi.report.model.request.OverviewReportRequest;
 import com.nemi.report.model.request.ReportTimeRange;
 import com.nemi.report.model.response.ConfigResponse;
@@ -12,6 +15,7 @@ import com.nemi.report.repository.OrderRepository;
 import com.nemi.report.service.ConfigService;
 import com.nemi.report.service.OverviewReportService;
 import com.nemi.report.util.ReportUtils;
+import com.nemi.report.util.ValidationUtils;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -43,6 +47,7 @@ public class OverviewReportServiceImpl implements OverviewReportService {
         log.info("[OverviewReportServiceImpl.getOverviewReport] Start calculating overview report: from={} to={} compareWith={} currency={}",
                 request.getFrom(), request.getTo(), request.getCompareWith(), request.getCurrency());
 
+        ValidationUtils.validateTimeRange(request.getFrom(), request.getTo());
         ConfigResponse config = configService.getConfig();
 
         List<String> totalOrderStatus = OrderStatus.getTotalOrdersStatus();
@@ -77,7 +82,7 @@ public class OverviewReportServiceImpl implements OverviewReportService {
                     .build();
         } catch (Exception e) {
             log.error("[OverviewReportServiceImpl.getOverviewReport] Failed to get overview report: {}", e.getMessage(), e);
-            throw new RuntimeException(e);
+            throw new TechnicalException(AlertMessages.alert(TechnicalAlertCode.OVERVIEW_REPORT_ERROR));
         }
     }
 
