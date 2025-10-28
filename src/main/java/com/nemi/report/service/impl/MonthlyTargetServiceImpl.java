@@ -1,9 +1,12 @@
 package com.nemi.report.service.impl;
 
+import com.nemi.exception.TechnicalException;
+import com.nemi.exception.pojo.AlertMessages;
 import com.nemi.report.configuration.ReportConfig;
 import com.nemi.report.constant.OrderStatus;
 import com.nemi.report.entity.MonthlyTargetEntity;
 import com.nemi.report.entity.OrderEntity;
+import com.nemi.report.exception.TechnicalAlertCode;
 import com.nemi.report.model.request.MonthlyTargetRequest;
 import com.nemi.report.model.request.ReportTimeRange;
 import com.nemi.report.model.request.UpdateMonthlyTargetRequest;
@@ -110,7 +113,7 @@ public class MonthlyTargetServiceImpl implements MonthlyTargetService {
             return monthlyTargetResponse;
         } catch (Exception e) {
             log.error("[MonthlyTargetServiceImpl.getMonthlyTarget] Failed to get monthly target: {}", e.getMessage(), e);
-            throw new RuntimeException(e);
+            throw new TechnicalException(AlertMessages.alert(TechnicalAlertCode.MONTHLY_TARGET_ERROR));
         }
     }
 
@@ -137,7 +140,7 @@ public class MonthlyTargetServiceImpl implements MonthlyTargetService {
             log.info("[MonthlyTargetServiceImpl.updateMonthlyTarget] Successfully updated monthly target for departmentId={}", claimUtil.getDepartmentId());
         } catch (Exception e) {
             log.error("[MonthlyTargetServiceImpl.updateMonthlyTarget] Failed to update monthly target: {}", e.getMessage(), e);
-            throw new RuntimeException(e);
+            throw new TechnicalException(AlertMessages.alert(TechnicalAlertCode.MONTHLY_TARGET_ERROR));
         }
     }
 

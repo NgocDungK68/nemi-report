@@ -1,10 +1,13 @@
 package com.nemi.report.service.impl;
 
+import com.nemi.exception.TechnicalException;
+import com.nemi.exception.pojo.AlertMessages;
 import com.nemi.report.configuration.ReportConfig;
 import com.nemi.report.constant.ColumnLegend;
 import com.nemi.report.constant.Currency;
 import com.nemi.report.constant.OrderStatus;
 import com.nemi.report.constant.OverviewDataType;
+import com.nemi.report.exception.TechnicalAlertCode;
 import com.nemi.report.model.request.CompareChartRequest;
 import com.nemi.report.model.request.ReportTimeRange;
 import com.nemi.report.model.response.CompareChartResponse;
@@ -12,6 +15,7 @@ import com.nemi.report.model.response.ConfigResponse;
 import com.nemi.report.service.CompareChartService;
 import com.nemi.report.service.ConfigService;
 import com.nemi.report.util.ReportUtils;
+import com.nemi.report.util.ValidationUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -36,6 +40,8 @@ public class CompareChartServiceImpl implements CompareChartService {
     public CompareChartResponse getCompareChart(CompareChartRequest request) {
         log.info("[CompareChartServiceImpl.getCompareChart] Start calculating compare chart: from={} to={} compareWith={} dataType={} currency={}",
                 request.getFrom(), request.getTo(), request.getCompareWith(), request.getDataType(), request.getCurrency());
+
+        ValidationUtils.validateTimeRange(request.getFrom(), request.getTo());
 
         try {
             List<CompareChartResponse.ChartDataPoint> dataList = new ArrayList<>();
@@ -76,7 +82,7 @@ public class CompareChartServiceImpl implements CompareChartService {
                     .build();
         } catch (Exception e) {
             log.error("[CompareChartServiceImpl.getCompareChart] Failed: {}", e.getMessage(), e);
-            throw new RuntimeException(e);
+            throw new TechnicalException(AlertMessages.alert(TechnicalAlertCode.COMPARE_CHART_ERROR));
         }
     }
 

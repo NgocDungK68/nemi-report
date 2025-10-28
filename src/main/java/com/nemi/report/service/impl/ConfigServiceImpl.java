@@ -1,8 +1,11 @@
 package com.nemi.report.service.impl;
 
+import com.nemi.exception.TechnicalException;
+import com.nemi.exception.pojo.AlertMessages;
 import com.nemi.report.constant.ConfirmOrderWhen;
 import com.nemi.report.constant.ReturnOrderWhen;
 import com.nemi.report.entity.ReportSettingEntity;
+import com.nemi.report.exception.TechnicalAlertCode;
 import com.nemi.report.model.request.ConfigRequest;
 import com.nemi.report.model.response.ConfigResponse;
 import com.nemi.report.repository.ReportSettingRepository;
@@ -75,7 +78,7 @@ public class ConfigServiceImpl implements ConfigService {
                     .build();
         } catch (Exception e) {
             log.error("[ConfigServiceImpl.updateConfig] Failed to update config for userId={} - error={}", userId, e.getMessage(), e);
-            throw new RuntimeException(e);
+            throw new TechnicalException(AlertMessages.alert(TechnicalAlertCode.CONFIG_UPDATE_ERROR));
         }
     }
 }
