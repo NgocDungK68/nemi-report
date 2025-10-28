@@ -1,7 +1,6 @@
 package com.nemi.report.service.impl;
 
 import com.nemi.exception.TechnicalException;
-import com.nemi.exception.pojo.AlertCode;
 import com.nemi.exception.pojo.AlertMessages;
 import com.nemi.report.configuration.ReportConfig;
 import com.nemi.report.constant.OrderStatus;
