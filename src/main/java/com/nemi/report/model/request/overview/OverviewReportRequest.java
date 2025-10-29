@@ -1,16 +1,15 @@
-package com.nemi.report.model.request;
+package com.nemi.report.model.request.overview;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.nemi.report.constant.CompareWithType;
 import com.nemi.report.constant.Currency;
-import com.nemi.report.constant.OverviewDataType;
-import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
+import jakarta.validation.constraints.NotNull;
 import java.time.LocalDate;
 
 @Data
-public class CompareChartRequest {
+public class OverviewReportRequest {
 
     @NotNull
     @JsonFormat(pattern = "dd/MM/yyyy")
@@ -24,7 +23,4 @@ public class CompareChartRequest {
 
     @NotNull
     private Currency currency; // VND/USD
-
-    @NotNull
-    private OverviewDataType dataType; // REVENUE, AD_COST, AD_COST_PER_REVENUE, RETURNED_ORDER, PROFIT
 }

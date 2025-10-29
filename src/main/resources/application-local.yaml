@@ -52,6 +52,7 @@ management:
     port: 8082
 
 report:
+  base-url: https://nemi-dev-02.ecombase.net/nemi-report
   scale:
     revenue: 0
     percent: 2
@@ -72,3 +73,7 @@ report:
       - [22, 24]
   compare-chart:
     step-days: 1
+
+currency:
+  version: v1
+  currency-rate-url: currency-rate

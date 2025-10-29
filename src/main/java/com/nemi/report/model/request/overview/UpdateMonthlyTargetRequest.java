@@ -1,4 +1,4 @@
-package com.nemi.report.model.request;
+package com.nemi.report.model.request.overview;
 
 import lombok.Data;
 

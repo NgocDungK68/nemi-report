@@ -1,16 +1,17 @@
-package com.nemi.report.model.request;
+package com.nemi.report.model.request.product;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.nemi.report.constant.Currency;
+import com.nemi.report.constant.FilterType;
+import com.nemi.report.constant.OrderSort;
+import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
-import jakarta.validation.constraints.NotNull;
 import java.time.LocalDate;
 import java.util.List;
 
 @Data
-public class MarketingSummaryRequest {
-
+public class ProductSummaryRequest {
     @NotNull
     private Currency currency; // VND/USD
 
@@ -38,7 +39,7 @@ public class MarketingSummaryRequest {
         private String code;
 
         @NotNull
-        private String order; // ASC/DESC
+        private OrderSort order;
     }
 
     @Data
@@ -47,7 +48,7 @@ public class MarketingSummaryRequest {
         private String code;
 
         @NotNull
-        private String type; // enum type
+        private FilterType type;
 
         private List<String> value;
     }
