@@ -1,4 +1,4 @@
-package com.nemi.report.model.response;
+package com.nemi.report.model.response.overview;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
@@ -23,6 +23,8 @@ public class CompareChartResponse {
 
     @Data
     @Builder
+    @AllArgsConstructor
+    @NoArgsConstructor
     public static class ChartDataPoint {
         @JsonProperty("date")
         private String date; // dd/MM/yyyy
@@ -41,6 +43,9 @@ public class CompareChartResponse {
     }
 
     @Data
+    @Builder
+    @AllArgsConstructor
+    @NoArgsConstructor
     public static class Addition {
         @JsonProperty("order")
         private Integer order;

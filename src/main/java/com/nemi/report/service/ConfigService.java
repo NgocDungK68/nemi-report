@@ -1,7 +1,7 @@
 package com.nemi.report.service;
 
-import com.nemi.report.model.request.ConfigRequest;
-import com.nemi.report.model.response.ConfigResponse;
+import com.nemi.report.model.request.overview.ConfigRequest;
+import com.nemi.report.model.response.overview.ConfigResponse;
 
 public interface ConfigService {
     ConfigResponse getConfig();

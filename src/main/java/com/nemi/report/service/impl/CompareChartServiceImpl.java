@@ -1,18 +1,23 @@
 package com.nemi.report.service.impl;
 
+import com.nemi.exception.TechnicalException;
+import com.nemi.exception.pojo.AlertMessages;
 import com.nemi.report.configuration.ReportConfig;
 import com.nemi.report.constant.ColumnLegend;
 import com.nemi.report.constant.Currency;
 import com.nemi.report.constant.OrderStatus;
 import com.nemi.report.constant.OverviewDataType;
-import com.nemi.report.model.request.CompareChartRequest;
+import com.nemi.report.exception.TechnicalAlertCode;
+import com.nemi.report.model.request.overview.CompareChartRequest;
 import com.nemi.report.model.request.ReportTimeRange;
-import com.nemi.report.model.response.CompareChartResponse;
-import com.nemi.report.model.response.ConfigResponse;
+import com.nemi.report.model.response.overview.CompareChartResponse;
+import com.nemi.report.model.response.overview.ConfigResponse;
 import com.nemi.report.service.CompareChartService;
 import com.nemi.report.service.ConfigService;
 import com.nemi.report.util.ReportUtils;
+import com.nemi.report.util.ValidationUtils;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -25,46 +30,69 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class CompareChartServiceImpl implements CompareChartService {
-    private final ReportUtils reportUtils;
     private final ReportConfig reportConfig;
     private final OverviewReportServiceImpl overviewReportService;
     private final ConfigService configService;
 
     @Override
     public CompareChartResponse getCompareChart(CompareChartRequest request) {
-        List<CompareChartResponse.ChartDataPoint> dataList = new ArrayList<>();
-        ConfigResponse config = configService.getConfig();
+        log.info("[CompareChartServiceImpl.getCompareChart] Start calculating compare chart: from={} to={} compareWith={} dataType={} currency={}",
+                request.getFrom(), request.getTo(), request.getCompareWith(), request.getDataType(), request.getCurrency());
 
-        for (LocalDate date = request.getFrom(); !date.isAfter(request.getTo()); date = date.plusDays(reportConfig.getCompareChart().getStepDays())) {
-            LocalDate compareDate = date.minusDays(request.getCompareWith().getDays());
+        ValidationUtils.validateTimeRange(request.getFrom(), request.getTo());
 
-            BigDecimal presentValue = getValueByDataType(date, request.getDataType(), config);
-            BigDecimal previousValue = getValueByDataType(compareDate, request.getDataType(), config);
-            BigDecimal changePercent = reportUtils.changePercent(presentValue, previousValue);
+        try {
+            List<CompareChartResponse.ChartDataPoint> dataList = new ArrayList<>();
+            ConfigResponse config = configService.getConfig();
+            int changePercentScale = reportConfig.getScale().getPercent();
+            int stepDays = reportConfig.getCompareChart().getStepDays();
+            log.debug("[CompareChartServiceImpl.getCompareChart] Loaded config: {}, Steps days: {}", config, stepDays);
 
-            // TODO: code additions
-            CompareChartResponse.ChartDataPoint item = CompareChartResponse.ChartDataPoint.builder()
-                    .date(date.format(DateTimeFormatter.ofPattern(reportConfig.getDatePattern())))
-                    .presentValue(presentValue)
-                    .previousValue(previousValue)
-                    .changePercent(changePercent)
-                    .additions(null)
+            for (LocalDate date = request.getFrom(); !date.isAfter(request.getTo()); date = date.plusDays(stepDays)) {
+                LocalDate compareDate = date.minusDays(request.getCompareWith().getDays());
+                log.debug("[CompareChartServiceImpl.getCompareChart] Calculating data for date={} compareDate={}", date, compareDate);
+
+                BigDecimal presentValue = getValueByDataType(date, request.getDataType(), config);
+                BigDecimal previousValue = getValueByDataType(compareDate, request.getDataType(), config);
+                BigDecimal changePercent = ReportUtils.changePercent(presentValue, previousValue, changePercentScale);
+
+                // TODO: code additions
+                CompareChartResponse.ChartDataPoint item = CompareChartResponse.ChartDataPoint.builder()
+                        .date(date.format(DateTimeFormatter.ofPattern(reportConfig.getDatePattern())))
+                        .presentValue(presentValue)
+                        .previousValue(previousValue)
+                        .changePercent(changePercent)
+                        .additions(null)
+                        .build();
+
+                log.debug("[CompareChartServiceImpl.getCompareChart] Data point: date={} presentValue={} previousValue={} changePercent={}",
+                        item.getDate(), presentValue, previousValue, changePercent);
+
+                dataList.add(item);
+            }
+
+            log.info("[CompareChartServiceImpl.getCompareChart] Successfully calculating compare chart for range {} to {}",
+                    request.getFrom(), request.getTo());
+
+            return CompareChartResponse.builder()
+                    .data(dataList)
+                    .columnLegend(getColumnLegend(request.getDataType(), request.getCurrency()))
                     .build();
-
-            dataList.add(item);
+        } catch (Exception e) {
+            log.error("[CompareChartServiceImpl.getCompareChart] Failed: {}", e.getMessage(), e);
+            throw new TechnicalException(AlertMessages.alert(TechnicalAlertCode.COMPARE_CHART_ERROR));
         }
-
-        return CompareChartResponse.builder()
-                .data(dataList)
-                .columnLegend(getColumnLegend(request.getDataType(), request.getCurrency()))
-                .build();
     }
 
     private BigDecimal getValueByDataType(LocalDate date, OverviewDataType dataType, ConfigResponse config) {
         LocalDateTime from = date.atStartOfDay();
         LocalDateTime to = date.atTime(LocalTime.MAX);
         ReportTimeRange timeRange = ReportTimeRange.of(from, to);
+
+        log.debug("[CompareChartServiceImpl.getValueByDataType] Getting {} value for date={} ({} to {})",
+                dataType, date, from, to);
 
         return switch (dataType) {
             case REVENUE ->

@@ -19,6 +19,9 @@ import java.time.LocalDateTime;
 @Table(name = "report_setting", schema = "system_manager")
 public class ReportSettingEntity {
     @Id
+    @Column(name = "user_id")
+    private String userId;
+
     @Column(name = "department_id")
     private String departmentId;
 

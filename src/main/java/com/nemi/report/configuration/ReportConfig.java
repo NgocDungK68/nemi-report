@@ -10,6 +10,7 @@ import java.util.List;
 @Configuration
 @ConfigurationProperties("report")
 public class ReportConfig {
+    private String baseUrl;
     private ScaleConfig scale;
     private String datePattern;
     private BusinessToday businessToday;
@@ -17,7 +18,8 @@ public class ReportConfig {
 
     @Data
     public static class ScaleConfig {
-        private int changePercent;
+        private int revenue;
+        private int percent;
     }
 
     @Data

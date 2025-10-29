@@ -1,4 +1,4 @@
-package com.nemi.report.model.response;
+package com.nemi.report.model.response.overview;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
@@ -41,6 +41,8 @@ public class BusinessTodayResponse {
 
     @Data
     @Builder
+    @AllArgsConstructor
+    @NoArgsConstructor
     public static class OrderData {
         @JsonProperty("revenue")
         private BigDecimal revenue;
@@ -51,6 +53,8 @@ public class BusinessTodayResponse {
 
     @Data
     @Builder
+    @AllArgsConstructor
+    @NoArgsConstructor
     public static class HourFrameData {
         @JsonProperty("hourFrame")
         private String hourFrame;
@@ -58,6 +62,4 @@ public class BusinessTodayResponse {
         @JsonProperty("value")
         private BigDecimal value;
     }
-
-
 }

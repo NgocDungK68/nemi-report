@@ -3,8 +3,12 @@ package com.nemi.report.controller;
 import com.nemi.report.constant.CompareWithType;
 import com.nemi.report.constant.Currency;
 import com.nemi.report.constant.OverviewDataType;
-import com.nemi.report.model.request.*;
-import com.nemi.report.model.response.*;
+import com.nemi.report.model.request.overview.*;
+import com.nemi.report.model.response.overview.*;
+import com.nemi.report.service.BusinessTodayService;
+import com.nemi.report.service.CompareChartService;
+import com.nemi.report.service.ConfigService;
+import com.nemi.report.service.MonthlyTargetService;
 import com.nemi.report.service.impl.OverviewReportServiceImpl;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +23,10 @@ import java.time.LocalDate;
 @RequiredArgsConstructor
 public class OverviewReportController {
     private final OverviewReportServiceImpl overviewReportService;
+    private final CompareChartService compareChartService;
+    private final BusinessTodayService businessTodayService;
+    private final MonthlyTargetService monthlyTargetService;
+    private final ConfigService configService;
 
     @GetMapping("/revenue")
     public ResponseEntity<OverviewReportResponse> getOverviewReport(
@@ -34,7 +42,6 @@ public class OverviewReportController {
         request.setCurrency(currency);
 
         OverviewReportResponse response = overviewReportService.getOverviewReport(request);
-
         return ResponseEntity.ok(response);
     }
 
@@ -46,7 +53,6 @@ public class OverviewReportController {
             @RequestParam("currency") Currency currency,
             @RequestParam("dataType") OverviewDataType dataType) {
 
-        // Create request object from parameters
         CompareChartRequest request = new CompareChartRequest();
         request.setFrom(from);
         request.setTo(to);
@@ -54,12 +60,7 @@ public class OverviewReportController {
         request.setCurrency(currency);
         request.setDataType(dataType);
 
-        // TODO: Implement service call
-        // CompareChartResponse response = compareChartService.getCompareChart(request);
-
-        // Temporary mock response
-        CompareChartResponse response = new CompareChartResponse();
-
+        CompareChartResponse response = compareChartService.getCompareChart(request);
         return ResponseEntity.ok(response);
     }
 
@@ -67,15 +68,9 @@ public class OverviewReportController {
     public ResponseEntity<BusinessTodayResponse> getBusinessToday(
             @RequestParam("currency") Currency currency) {
 
-        // Create request object from parameters
         BusinessTodayRequest request = new BusinessTodayRequest();
         request.setCurrency(currency);
-
-        // TODO: Implement service call
-        // BusinessTodayResponse response = businessTodayService.getBusinessToday(request);
-
-        // Temporary mock response
-        BusinessTodayResponse response = new BusinessTodayResponse();
+        BusinessTodayResponse response = businessTodayService.getBusinessToday(request);
 
         return ResponseEntity.ok(response);
     }
@@ -84,15 +79,9 @@ public class OverviewReportController {
     public ResponseEntity<MonthlyTargetResponse> getMonthlyTarget(
             @RequestParam("currency") Currency currency) {
 
-        // Create request object from parameters
         MonthlyTargetRequest request = new MonthlyTargetRequest();
         request.setCurrency(currency);
-
-        // TODO: Implement service call
-        // MonthlyTargetResponse response = monthlyTargetService.getMonthlyTarget(request);
-
-        // Temporary mock response
-        MonthlyTargetResponse response = new MonthlyTargetResponse();
+        MonthlyTargetResponse response = monthlyTargetService.getMonthlyTarget(request);
 
         return ResponseEntity.ok(response);
     }
@@ -101,42 +90,22 @@ public class OverviewReportController {
     public ResponseEntity<String> updateMonthlyTarget(
             @Valid @RequestBody UpdateMonthlyTargetRequest request) {
 
-        // TODO: Implement service call
-        // monthlyTargetService.updateMonthlyTarget(request);
-
+        monthlyTargetService.updateMonthlyTarget(request);
         return ResponseEntity.ok("200");
     }
 
     @GetMapping("/config")
     public ResponseEntity<ConfigResponse> getConfig() {
 
-        // TODO: Implement service call
-        // ConfigResponse response = configService.getConfig();
-
-//        // Temporary mock response with example values from API spec
-//        ConfigResponse response = new ConfigResponse();
-//        response.setConfirmOrderWhen(Arrays.asList(
-//                "update_status_to_new",
-//                "update_status_to_confirm",
-//                "move_to_transporter",
-//                "reconciled"
-//        ));
-//        response.setReturnOrderWhen(Arrays.asList(
-//                "return",
-//                "returned"
-//        ));
-
-        return ResponseEntity.ok(null);
+        ConfigResponse response = configService.getConfig();
+        return ResponseEntity.ok(response);
     }
 
     @PutMapping("/config")
     public ResponseEntity<ConfigResponse> updateConfig(
             @RequestBody ConfigRequest request) {
 
-        // TODO: Implement service call
-        // ConfigResponse response = configService.updateConfig(request);
-
-        // For now, return the same data that was sent
-        return null;
+        ConfigResponse response = configService.updateConfig(request);
+        return ResponseEntity.ok(response);
     }
 }
