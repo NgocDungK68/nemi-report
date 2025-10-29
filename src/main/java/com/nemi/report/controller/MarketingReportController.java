@@ -1,7 +1,7 @@
 package com.nemi.report.controller;
 
-import com.nemi.report.model.request.MarketingSummaryRequest;
-import com.nemi.report.model.response.MarketingSummaryResponse;
+import com.nemi.report.model.request.marketing.MarketingSummaryRequest;
+import com.nemi.report.model.response.marketing.MarketingSummaryResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;

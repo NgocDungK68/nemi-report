@@ -1,4 +1,4 @@
-package com.nemi.report.model.response;
+package com.nemi.report.model.response.overview;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
