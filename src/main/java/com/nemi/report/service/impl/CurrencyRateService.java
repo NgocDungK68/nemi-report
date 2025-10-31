@@ -7,6 +7,7 @@ import jakarta.annotation.Resource;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -16,6 +17,8 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -32,20 +35,21 @@ public class CurrencyRateService {
     @Value("${secret.service-password}")
     private String servicePassword;
 
-    public CurrencyRateResponse getCurrencyRate(Long companyId, LocalDate from, LocalDate to) {
+    public List<CurrencyRateResponse> getCurrencyRate(Integer companyId, LocalDate from, LocalDate to) {
         try {
             String relativeUri = UriComponentsBuilder.fromPath(currencyConfig.getCurrencyRateUrl())
                     .queryParam(ReportConstants.COMPANY_ID, companyId)
-                    .queryParam(ReportConstants.FROM, from)
-                    .queryParam(ReportConstants.TO, to)
+                    .queryParam(ReportConstants.FROM, from.format(DateTimeFormatter.ISO_DATE))
+                    .queryParam(ReportConstants.TO, to.format(DateTimeFormatter.ISO_DATE))
                     .toUriString();
 
             HttpHeaders headers = new HttpHeaders();
             headers.setBasicAuth(serviceUsername, servicePassword);
 
             HttpEntity<Void> entity = new HttpEntity<>(headers);
-            ResponseEntity<CurrencyRateResponse> response =
-                    restTemplate.exchange(relativeUri, HttpMethod.GET, entity, CurrencyRateResponse.class);
+            ResponseEntity<List<CurrencyRateResponse>> response =
+                    restTemplate.exchange(relativeUri, HttpMethod.GET, entity, new ParameterizedTypeReference<>() {}
+                    );
 
             if (response.getStatusCode().is2xxSuccessful()) {
                 return response.getBody();

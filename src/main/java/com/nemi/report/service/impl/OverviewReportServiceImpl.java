@@ -3,11 +3,13 @@ package com.nemi.report.service.impl;
 import com.nemi.exception.TechnicalException;
 import com.nemi.exception.pojo.AlertMessages;
 import com.nemi.report.configuration.ReportConfig;
+import com.nemi.report.constant.Currency;
 import com.nemi.report.constant.OrderStatus;
 import com.nemi.report.entity.OrderEntity;
 import com.nemi.report.exception.TechnicalAlertCode;
 import com.nemi.report.model.request.overview.OverviewReportRequest;
 import com.nemi.report.model.request.ReportTimeRange;
+import com.nemi.report.model.response.CurrencyRateResponse;
 import com.nemi.report.model.response.overview.ConfigResponse;
 import com.nemi.report.model.response.overview.OverviewReportResponse;
 import com.nemi.report.model.response.overview.RevenueSummary;
@@ -16,16 +18,23 @@ import com.nemi.report.service.ConfigService;
 import com.nemi.report.service.OverviewReportService;
 import com.nemi.report.util.ReportUtils;
 import com.nemi.report.util.ValidationUtils;
+import com.nemi.util.ClaimUtil;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.ObjectUtils;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -34,11 +43,15 @@ public class OverviewReportServiceImpl implements OverviewReportService {
     private final OrderRepository orderRepository;
     private final ConfigService configService;
     private final ReportConfig reportConfig;
+    private final CurrencyRateService currencyRateService;
+    private final ClaimUtil claimUtil;
 
     private int percentScale;
+    private int usdScale;
 
     @PostConstruct
-    public void init(){
+    public void init() {
+        usdScale = reportConfig.getScale().getUsd();
         percentScale = reportConfig.getScale().getPercent();
     }
 
@@ -49,6 +62,8 @@ public class OverviewReportServiceImpl implements OverviewReportService {
 
         ValidationUtils.validateTimeRange(request.getFrom(), request.getTo());
         ConfigResponse config = configService.getConfig();
+        Currency currency = request.getCurrency();
+        List<CurrencyRateResponse> currencyRateResponses = currencyRateService.getCurrencyRate(claimUtil.getCompanyId(), request.getFrom(), request.getTo());
 
         List<String> totalOrderStatus = OrderStatus.getTotalOrdersStatus();
         List<String> returnedOrdersStatus = config.getReturnOrderWhen().getOrderStatus();
@@ -63,10 +78,10 @@ public class OverviewReportServiceImpl implements OverviewReportService {
         ReportTimeRange previousPeriod = ReportTimeRange.of(compareFrom, compareTo);
 
         try {
-            OverviewReportResponse.OrderData totalRevenueData = getOrderData(currentPeriod, previousPeriod, totalOrderStatus);
-            OverviewReportResponse.OrderData returnedOrdersData = getOrderData(currentPeriod, previousPeriod, returnedOrdersStatus);
-            OverviewReportResponse.OrderData confirmedOrdersData = getOrderData(currentPeriod, previousPeriod, confirmedOrderStatus);
-            OverviewReportResponse.OrderData deliveringOrdersData = getOrderData(currentPeriod, previousPeriod, deliveringOrderStatus);
+            OverviewReportResponse.OrderData totalRevenueData = getOrderData(currentPeriod, previousPeriod, totalOrderStatus, currency);
+            OverviewReportResponse.OrderData returnedOrdersData = getOrderData(currentPeriod, previousPeriod, returnedOrdersStatus, currency);
+            OverviewReportResponse.OrderData confirmedOrdersData = getOrderData(currentPeriod, previousPeriod, confirmedOrderStatus, currency);
+            OverviewReportResponse.OrderData deliveringOrdersData = getOrderData(currentPeriod, previousPeriod, deliveringOrderStatus, currency);
             OverviewReportResponse.CostData adCostData = getAdCostData(currentPeriod, previousPeriod);
             OverviewReportResponse.ProfitData profitData = getProfitData(currentPeriod, previousPeriod);
 
@@ -88,7 +103,8 @@ public class OverviewReportServiceImpl implements OverviewReportService {
 
     private OverviewReportResponse.OrderData getOrderData(ReportTimeRange currentPeriod,
                                                           ReportTimeRange previousPeriod,
-                                                          List<String> orderStatus) {
+                                                          List<String> orderStatus,
+                                                          Currency currency) {
         log.debug("[OverviewReportServiceImpl.getOrderData] Getting orders for statuses: {} | Current: {} to {} | Previous: {} to {}",
                 orderStatus, currentPeriod.getFrom(), currentPeriod.getTo(), previousPeriod.getFrom(), previousPeriod.getTo());
 
@@ -190,6 +206,41 @@ public class OverviewReportServiceImpl implements OverviewReportService {
         return orders.stream()
                 .map(OrderEntity::getTotalPrice)
                 .filter(Objects::nonNull)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    public BigDecimal getOrderRevenue(List<OrderEntity> orders,
+                                      List<CurrencyRateResponse> currencyRates,
+                                      Currency targetCurrency) {
+        if (ObjectUtils.isEmpty(orders)) {
+            return BigDecimal.ZERO;
+        }
+
+        if (ObjectUtils.isEmpty(targetCurrency) || targetCurrency == Currency.VND) {
+            // Nếu currency là VND thì không cần quy đổi
+            return orders.stream()
+                    .map(OrderEntity::getTotalPrice)
+                    .filter(Objects::nonNull)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+        }
+
+        // Map nhanh tỉ giá theo ngày để tra cứu
+        Map<LocalDate, BigDecimal> dailyRateMap = currencyRates.stream()
+                .collect(Collectors.toMap(
+                        rate -> LocalDate.parse(rate.getDate(), DateTimeFormatter.ofPattern("yyyyMMdd")),
+                        rate -> rate.getExchangeRates().stream()
+                                .filter(er -> er.getCurrency().equalsIgnoreCase(targetCurrency.getCode()))
+                                .findFirst()
+                                .map(CurrencyRateResponse.ExchangeRate::getRate)
+                                .orElse(BigDecimal.ONE) // fallback nếu không có
+                ));
+        return orders.parallelStream()
+                .map(order -> {
+                    LocalDate orderDate = order.getUpdatedAt().toLocalDate();
+                    BigDecimal rate = dailyRateMap.getOrDefault(orderDate, BigDecimal.ONE);
+                    BigDecimal totalPrice = ObjectUtils.isNotEmpty(order.getTotalPrice()) ? order.getTotalPrice() : BigDecimal.ZERO;
+                    return totalPrice.multiply(rate);
+                })
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 }
