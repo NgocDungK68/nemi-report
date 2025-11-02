@@ -19,7 +19,7 @@ public class ReportConfig {
     @Data
     public static class ScaleConfig {
         private int vnd;
-        private int usd;
+        private int other;
         private int percent;
     }
 

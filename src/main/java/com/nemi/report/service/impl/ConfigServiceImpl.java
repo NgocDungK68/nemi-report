@@ -59,15 +59,22 @@ public class ConfigServiceImpl implements ConfigService {
         try {
             Optional<ReportSettingEntity> reportSettingEntity = reportSettingRepository.findById(claimUtil.getUserId());
 
-            ReportSettingEntity reportSetting = reportSettingEntity.orElseGet(() -> ReportSettingEntity.builder()
-                    .userId(userId)
-                    .departmentId(claimUtil.getDepartmentId())
-                    .companyId(claimUtil.getCompanyId())
-                    .updatedBy(claimUtil.getUserName())
-                    .build());
+            ReportSettingEntity reportSetting;
+            if (reportSettingEntity.isPresent()) {
+                reportSetting = reportSettingEntity.get();
+                reportSetting.setUpdatedAt(LocalDateTime.now());
+                reportSetting.setUpdatedBy(claimUtil.getUserName());
+            } else {
+                reportSetting = ReportSettingEntity.builder()
+                        .userId(userId)
+                        .departmentId(claimUtil.getDepartmentId())
+                        .companyId(claimUtil.getCompanyId())
+                        .createdBy(claimUtil.getUserName())
+                        .build();
+            }
+
             reportSetting.setConfirmOrderWhen(request.getConfirmOrderWhen().getCode());
             reportSetting.setReturnOrderWhen(request.getReturnOrderWhen().getCode());
-            reportSetting.setUpdatedTime(LocalDateTime.now());
             reportSettingRepository.save(reportSetting);
 
             log.info("[ConfigServiceImpl.updateConfig] Config updated successfully for userId={}", userId);
