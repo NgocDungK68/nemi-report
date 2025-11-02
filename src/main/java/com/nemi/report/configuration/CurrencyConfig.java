@@ -8,6 +8,7 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 @ConfigurationProperties("currency")
 public class CurrencyConfig {
+    private String baseUrl;
     private String version;
     private String currencyRateUrl;
 }

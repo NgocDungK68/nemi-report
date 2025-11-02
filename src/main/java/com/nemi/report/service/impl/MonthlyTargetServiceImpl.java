@@ -3,12 +3,13 @@ package com.nemi.report.service.impl;
 import com.nemi.exception.TechnicalException;
 import com.nemi.exception.pojo.AlertMessages;
 import com.nemi.report.configuration.ReportConfig;
+import com.nemi.report.constant.Currency;
 import com.nemi.report.constant.OrderStatus;
 import com.nemi.report.entity.MonthlyTargetEntity;
 import com.nemi.report.entity.OrderEntity;
 import com.nemi.report.exception.TechnicalAlertCode;
+import com.nemi.report.model.request.CurrencyRates;
 import com.nemi.report.model.request.overview.MonthlyTargetRequest;
-import com.nemi.report.model.request.ReportTimeRange;
 import com.nemi.report.model.request.overview.UpdateMonthlyTargetRequest;
 import com.nemi.report.model.response.overview.ConfigResponse;
 import com.nemi.report.model.response.overview.MonthlyTargetResponse;
@@ -28,7 +29,10 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -45,6 +49,7 @@ public class MonthlyTargetServiceImpl implements MonthlyTargetService {
     private final ReportConfig reportConfig;
     private final ClaimUtil claimUtil;
     private final ConfigService configService;
+    private final CurrencyRateService currencyRateService;
 
     private int percentScale;
 
@@ -60,34 +65,47 @@ public class MonthlyTargetServiceImpl implements MonthlyTargetService {
                 claimUtil.getDepartmentId());
 
         try {
+            CurrencyRates currencyRates = currencyRateService.getCurrencyRatesThisMonth(
+                    claimUtil.getCompanyId(),
+                    request.getCurrency()
+            );
+
             ConfigResponse config = configService.getConfig();
 
             // KPI
             Optional<MonthlyTargetEntity> monthlyTargetEntity = monthlyTargetRepository.findById(claimUtil.getDepartmentId());
-            BigDecimal targetRevenue = monthlyTargetEntity.map(MonthlyTargetEntity::getRevenue)
-                    .orElse(BigDecimal.ZERO);
-            BigDecimal targetAdCostPerRevenue = monthlyTargetEntity.map(MonthlyTargetEntity::getAdCostPerRevenue)
-                    .orElse(BigDecimal.ZERO);
-            BigDecimal targetReturnedOrderPercent = monthlyTargetEntity.map(MonthlyTargetEntity::getReturnedOrderPercent)
-                    .orElse(BigDecimal.ZERO);
+            BigDecimal targetRevenue = getTarget(
+                    monthlyTargetEntity.map(MonthlyTargetEntity::getRevenue).orElse(BigDecimal.ZERO),
+                    currencyRates
+            );
+            BigDecimal targetAdCostPerRevenue = getTarget(
+                    monthlyTargetEntity.map(MonthlyTargetEntity::getAdCostPerRevenue).orElse(BigDecimal.ZERO),
+                    currencyRates
+            );
+            BigDecimal targetReturnedOrderPercent = getTarget(
+                    monthlyTargetEntity.map(MonthlyTargetEntity::getReturnedOrderPercent).orElse(BigDecimal.ZERO),
+                    currencyRates
+            );
 
             // Doanh số hôm nay
-            BigDecimal revenueToday = businessTodayService.getRevenueToday();
+            BigDecimal revenueToday = businessTodayService.getRevenueToday(request.getCurrency());
 
             // Thông tin doanh số và số lượng orders trong tháng tính đến thời điểm hiện tại
-            ReportTimeRange thisMonth = ReportTimeRange.thisMonth();
+            LocalDateTime firstDayOfMonth = LocalDate.now().withDayOfMonth(1).atStartOfDay();
             List<OrderEntity> ordersThisMonth = orderRepository.findByStatusInAndUpdatedAtBetween(
                     OrderStatus.getTotalOrdersStatus(),
-                    thisMonth.getFrom(),
-                    thisMonth.getTo()
+                    firstDayOfMonth,
+                    LocalDate.now().atTime(LocalTime.MAX)
             );
             log.debug("[MonthlyTargetServiceImpl.getMonthlyTarget] Found {} orders this month", ordersThisMonth.size());
-            BigDecimal totalRevenue = overviewReportService.getOrderRevenue(ordersThisMonth);
-            BigDecimal totalOrders = BigDecimal.valueOf(ordersThisMonth.size());
-            RevenueSummary returnedOrder = overviewReportService.getOrderSummary(thisMonth, config.getReturnOrderWhen().getOrderStatus());
+
+            RevenueSummary orderThisMonth = overviewReportService.getOrderSummary(OrderStatus.getTotalOrdersStatus(), currencyRates);
+            BigDecimal totalRevenue = orderThisMonth.getRevenue();
+            BigDecimal totalOrders = orderThisMonth.getNumber();
+            RevenueSummary returnedOrder = overviewReportService.getOrderSummary(config.getReturnOrderWhen().getOrderStatus(), currencyRates);
 
             // Thông tin ads
-            RevenueSummary ads = overviewReportService.getAdsSummary(thisMonth);
+            RevenueSummary ads = overviewReportService.getAdsSummary(currencyRates);
             BigDecimal adCost = ads.getRevenue();
 
             // Build Response
@@ -124,12 +142,11 @@ public class MonthlyTargetServiceImpl implements MonthlyTargetService {
         try {
             Optional<MonthlyTargetEntity> monthlyTargetEntity = monthlyTargetRepository.findById(claimUtil.getDepartmentId());
 
-            // TODO: code currency
             MonthlyTargetEntity monthlyTarget = monthlyTargetEntity.orElseGet(() -> MonthlyTargetEntity.builder()
                     .departmentId(claimUtil.getDepartmentId())
                     .companyId(claimUtil.getCompanyId())
                     .updatedBy(claimUtil.getUserName())
-                    .currency(null)
+                    .currency(Currency.VND.getCode())
                     .build());
 
             monthlyTarget.setRevenue(request.getTargetRevenue());
@@ -237,5 +254,31 @@ public class MonthlyTargetServiceImpl implements MonthlyTargetService {
                 .divide(targetRevenue, reportConfig.getScale().getPercent() + 2, RoundingMode.HALF_UP)
                 .multiply(BigDecimal.valueOf(100))
                 .setScale(percentScale, RoundingMode.HALF_UP);
+    }
+
+    private BigDecimal averageCurrencyRate(CurrencyRates currencyRates) {
+        if (ObjectUtils.isEmpty(currencyRates) || ObjectUtils.isEmpty(currencyRates.getCurrencyRate())) {
+            return BigDecimal.ONE; // không có dữ liệu thì xem như tỷ giá = 1 (tức là VND)
+        }
+
+        Collection<BigDecimal> rates = currencyRates.getCurrencyRate().values();
+
+        BigDecimal total = rates.stream()
+                .filter(Objects::nonNull)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        int count = (int) rates.stream()
+                .filter(Objects::nonNull)
+                .count();
+
+        if (count == 0) {
+            return BigDecimal.ONE;
+        }
+
+        return total.divide(BigDecimal.valueOf(count), 10, RoundingMode.HALF_UP);
+    }
+
+    private BigDecimal getTarget(BigDecimal target, CurrencyRates currencyRates) {
+        return target.multiply(averageCurrencyRate(currencyRates));
     }
 }
