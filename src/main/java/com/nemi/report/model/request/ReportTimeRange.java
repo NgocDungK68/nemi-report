@@ -24,6 +24,13 @@ public class ReportTimeRange {
                 .build();
     }
 
+    public static ReportTimeRange of(LocalDate from, LocalDate to) {
+        return ReportTimeRange.builder()
+                .from(from.atStartOfDay())
+                .to(to.atTime(LocalTime.MAX))
+                .build();
+    }
+
     public static ReportTimeRange today() {
         LocalDate today = LocalDate.now();
         LocalDateTime startOfDay = today.atStartOfDay();
@@ -34,7 +41,7 @@ public class ReportTimeRange {
     public static ReportTimeRange thisMonth() {
         LocalDate today = LocalDate.now();
         LocalDateTime startOfMonth = today.withDayOfMonth(1).atStartOfDay();
-        LocalDateTime endOfMonth = today.withDayOfMonth(today.lengthOfMonth()).atTime(LocalTime.MAX);
+        LocalDateTime endOfMonth = today.atTime(LocalTime.MAX);
         return ReportTimeRange.of(startOfMonth, endOfMonth);
     }
 }

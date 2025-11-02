@@ -3,17 +3,23 @@ package com.nemi.report.service.impl;
 import com.nemi.exception.TechnicalException;
 import com.nemi.exception.pojo.AlertMessages;
 import com.nemi.report.configuration.ReportConfig;
+import com.nemi.report.constant.Currency;
 import com.nemi.report.constant.OrderStatus;
+import com.nemi.report.entity.OrderEntity;
 import com.nemi.report.exception.TechnicalAlertCode;
-import com.nemi.report.model.request.overview.BusinessTodayRequest;
+import com.nemi.report.model.request.CurrencyRates;
 import com.nemi.report.model.request.ReportTimeRange;
+import com.nemi.report.model.request.overview.BusinessTodayRequest;
 import com.nemi.report.model.response.overview.BusinessTodayResponse;
 import com.nemi.report.model.response.overview.ConfigResponse;
 import com.nemi.report.model.response.overview.RevenueSummary;
+import com.nemi.report.repository.OrderRepository;
 import com.nemi.report.service.BusinessTodayService;
 import com.nemi.report.service.ConfigService;
+import com.nemi.util.ClaimUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.ObjectUtils;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -27,8 +33,11 @@ import java.util.List;
 @Slf4j
 public class BusinessTodayServiceImpl implements BusinessTodayService {
     private final ReportConfig reportConfig;
+    private final OrderRepository orderRepository;
     private final OverviewReportServiceImpl overviewReportService;
     private final ConfigService configService;
+    private final CurrencyRateService currencyRateService;
+    private final ClaimUtil claimUtil;
 
     @Override
     public BusinessTodayResponse getBusinessToday(BusinessTodayRequest request) {
@@ -37,25 +46,31 @@ public class BusinessTodayServiceImpl implements BusinessTodayService {
         try {
             ReportTimeRange timeToday = ReportTimeRange.today();
             ConfigResponse config = configService.getConfig();
+            CurrencyRates currencyRateToday = currencyRateService.getCurrencyRate(
+                    claimUtil.getCompanyId(),
+                    timeToday.getFrom().toLocalDate(),
+                    timeToday.getTo().toLocalDate(),
+                    request.getCurrency()
+            );
 
             // Doanh số hôm nay
             BusinessTodayResponse.OrderData totalOrders = convertToOrderData(
-                    overviewReportService.getOrderSummary(timeToday, OrderStatus.getTotalOrdersStatus())
+                    overviewReportService.getOrderSummary(OrderStatus.getTotalOrdersStatus(), currencyRateToday)
             );
 
             // ads
-            BigDecimal adCost = overviewReportService.getAdsSummary(timeToday).getRevenue();
-            BigDecimal adCostPerRevenue = overviewReportService.getAdsSummary(timeToday).getNumber();
+            BigDecimal adCost = overviewReportService.getAdsSummary(currencyRateToday).getRevenue();
+            BigDecimal adCostPerRevenue = overviewReportService.getAdsSummary(currencyRateToday).getNumber();
 
             // order
             BusinessTodayResponse.OrderData confirmedOrder = convertToOrderData(
-                    overviewReportService.getOrderSummary(timeToday, config.getConfirmOrderWhen().getOrderStatus())
+                    overviewReportService.getOrderSummary(config.getConfirmOrderWhen().getOrderStatus(), currencyRateToday)
             );
             BusinessTodayResponse.OrderData deliveredOrder = convertToOrderData(
-                    overviewReportService.getOrderSummary(timeToday, OrderStatus.getDeliveringOrdersStatus())
+                    overviewReportService.getOrderSummary(OrderStatus.getDeliveringOrdersStatus(), currencyRateToday)
             );
             BusinessTodayResponse.OrderData canceledOrder = convertToOrderData(
-                    overviewReportService.getOrderSummary(timeToday, OrderStatus.getCancelledOrdersStatus())
+                    overviewReportService.getOrderSummary(OrderStatus.getCancelledOrdersStatus(), currencyRateToday)
             );
             BusinessTodayResponse.OrderData pendingOrder = BusinessTodayResponse.OrderData.builder()
                     .revenue(totalOrders.getRevenue().subtract(deliveredOrder.getRevenue()))
@@ -64,16 +79,10 @@ public class BusinessTodayServiceImpl implements BusinessTodayService {
 
             // Doanh thu theo khung giờ linh hoạt
             List<BusinessTodayResponse.HourFrameData> revenueFrames = new ArrayList<>();
-            LocalDateTime startOfDay = LocalDate.now().atStartOfDay();
             for (List<Integer> frame : reportConfig.getBusinessToday().getHourFrame()) {
                 int startHour = frame.get(0);
                 int endHour = frame.get(1);
-                LocalDateTime from = startOfDay.plusHours(startHour);
-                LocalDateTime to = startOfDay.plusHours(endHour);
-                ReportTimeRange period = ReportTimeRange.of(from, to);
-                BigDecimal frameRevenue = overviewReportService
-                        .getOrderSummary(period, OrderStatus.getTotalOrdersStatus())
-                        .getRevenue();
+                BigDecimal frameRevenue = getFrameRevenue(startHour, endHour, currencyRateToday);
 
                 log.debug("[BusinessTodayServiceImpl.getBusinessToday] Hour frame {}-{}: revenue={}", startHour, endHour, frameRevenue);
 
@@ -111,11 +120,43 @@ public class BusinessTodayServiceImpl implements BusinessTodayService {
                 .build();
     }
 
-    public BigDecimal getRevenueToday() {
+    private BigDecimal getFrameRevenue(int startHour, int endHour, CurrencyRates currencyRates) {
+        LocalDate dateToday = LocalDate.now();
+        LocalDateTime startOfDay = dateToday.atStartOfDay();
+        LocalDateTime from = startOfDay.plusHours(startHour);
+        LocalDateTime to = startOfDay.plusHours(endHour);
+
+        List<OrderEntity> orderEntities = orderRepository.findByStatusInAndUpdatedAtBetween(OrderStatus.getTotalOrdersStatus(), from, to);
+        BigDecimal orderRevenue = overviewReportService.getOrderRevenue(orderEntities);
+        if (ObjectUtils.isNotEmpty(currencyRates.getCurrencyRate())) {
+            orderRevenue = orderRevenue.multiply(currencyRates.getCurrencyRate().get(dateToday));
+        }
+        return orderRevenue;
+    }
+
+    public BigDecimal getRevenueToday(Currency currency) {
+        ReportTimeRange timeToday = ReportTimeRange.today();
+        CurrencyRates currencyRates = currencyRateService.getCurrencyRate(
+                claimUtil.getCompanyId(),
+                timeToday.getFrom().toLocalDate(),
+                timeToday.getTo().toLocalDate(),
+                currency
+        );
+
         BusinessTodayResponse.OrderData totalOrders = convertToOrderData(
-                overviewReportService.getOrderSummary(ReportTimeRange.today(), OrderStatus.getTotalOrdersStatus())
+                overviewReportService.getOrderSummary(OrderStatus.getTotalOrdersStatus(), currencyRates)
         );
 
         return totalOrders.getRevenue();
+    }
+
+    private CurrencyRates getCurrencyRatesToday(Currency currency) {
+        ReportTimeRange timeToday = ReportTimeRange.today();
+        return currencyRateService.getCurrencyRate(
+                claimUtil.getCompanyId(),
+                timeToday.getFrom().toLocalDate(),
+                timeToday.getTo().toLocalDate(),
+                currency
+        );
     }
 }

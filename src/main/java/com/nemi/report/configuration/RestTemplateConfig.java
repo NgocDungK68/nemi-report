@@ -10,7 +10,6 @@ import org.springframework.web.util.DefaultUriBuilderFactory;
 @Configuration
 @RequiredArgsConstructor
 public class RestTemplateConfig {
-    private final ReportConfig reportConfig;
     private final CurrencyConfig currencyConfig;
 
     @Bean
@@ -22,7 +21,7 @@ public class RestTemplateConfig {
     public RestTemplate currencyRestTemplate() {
         RestTemplate restTemplate = new RestTemplate();
         restTemplate.setUriTemplateHandler(new DefaultUriBuilderFactory(
-                reportConfig.getBaseUrl() + "/" +
+                currencyConfig.getBaseUrl() + "/" +
                         ApiPath.SERVICE_API + "/" +
                         currencyConfig.getVersion() + "/"
         ));

@@ -3,12 +3,14 @@ package com.nemi.report.service.impl;
 import com.nemi.exception.TechnicalException;
 import com.nemi.exception.pojo.AlertMessages;
 import com.nemi.report.configuration.ReportConfig;
+import com.nemi.report.constant.Currency;
 import com.nemi.report.constant.OrderStatus;
 import com.nemi.report.entity.MonthlyTargetEntity;
 import com.nemi.report.entity.OrderEntity;
 import com.nemi.report.exception.TechnicalAlertCode;
-import com.nemi.report.model.request.overview.MonthlyTargetRequest;
+import com.nemi.report.model.request.CurrencyRates;
 import com.nemi.report.model.request.ReportTimeRange;
+import com.nemi.report.model.request.overview.MonthlyTargetRequest;
 import com.nemi.report.model.request.overview.UpdateMonthlyTargetRequest;
 import com.nemi.report.model.response.overview.ConfigResponse;
 import com.nemi.report.model.response.overview.MonthlyTargetResponse;
@@ -45,6 +47,7 @@ public class MonthlyTargetServiceImpl implements MonthlyTargetService {
     private final ReportConfig reportConfig;
     private final ClaimUtil claimUtil;
     private final ConfigService configService;
+    private final CurrencyRateService currencyRateService;
 
     private int percentScale;
 
@@ -60,6 +63,14 @@ public class MonthlyTargetServiceImpl implements MonthlyTargetService {
                 claimUtil.getDepartmentId());
 
         try {
+            ReportTimeRange thisMonth = ReportTimeRange.thisMonth();
+            CurrencyRates currencyRates = currencyRateService.getCurrencyRate(
+                    claimUtil.getCompanyId(),
+                    thisMonth.getFrom().toLocalDate(),
+                    thisMonth.getTo().toLocalDate(),
+                    request.getCurrency()
+            );
+
             ConfigResponse config = configService.getConfig();
 
             // KPI
@@ -72,22 +83,23 @@ public class MonthlyTargetServiceImpl implements MonthlyTargetService {
                     .orElse(BigDecimal.ZERO);
 
             // Doanh số hôm nay
-            BigDecimal revenueToday = businessTodayService.getRevenueToday();
+            BigDecimal revenueToday = businessTodayService.getRevenueToday(request.getCurrency());
 
             // Thông tin doanh số và số lượng orders trong tháng tính đến thời điểm hiện tại
-            ReportTimeRange thisMonth = ReportTimeRange.thisMonth();
             List<OrderEntity> ordersThisMonth = orderRepository.findByStatusInAndUpdatedAtBetween(
                     OrderStatus.getTotalOrdersStatus(),
                     thisMonth.getFrom(),
                     thisMonth.getTo()
             );
             log.debug("[MonthlyTargetServiceImpl.getMonthlyTarget] Found {} orders this month", ordersThisMonth.size());
-            BigDecimal totalRevenue = overviewReportService.getOrderRevenue(ordersThisMonth);
-            BigDecimal totalOrders = BigDecimal.valueOf(ordersThisMonth.size());
-            RevenueSummary returnedOrder = overviewReportService.getOrderSummary(thisMonth, config.getReturnOrderWhen().getOrderStatus());
+
+            RevenueSummary orderThisMonth = overviewReportService.getOrderSummary(OrderStatus.getTotalOrdersStatus(), currencyRates);
+            BigDecimal totalRevenue = orderThisMonth.getRevenue();
+            BigDecimal totalOrders = orderThisMonth.getNumber();
+            RevenueSummary returnedOrder = overviewReportService.getOrderSummary(config.getReturnOrderWhen().getOrderStatus(), currencyRates);
 
             // Thông tin ads
-            RevenueSummary ads = overviewReportService.getAdsSummary(thisMonth);
+            RevenueSummary ads = overviewReportService.getAdsSummary(currencyRates);
             BigDecimal adCost = ads.getRevenue();
 
             // Build Response
@@ -124,12 +136,11 @@ public class MonthlyTargetServiceImpl implements MonthlyTargetService {
         try {
             Optional<MonthlyTargetEntity> monthlyTargetEntity = monthlyTargetRepository.findById(claimUtil.getDepartmentId());
 
-            // TODO: code currency
             MonthlyTargetEntity monthlyTarget = monthlyTargetEntity.orElseGet(() -> MonthlyTargetEntity.builder()
                     .departmentId(claimUtil.getDepartmentId())
                     .companyId(claimUtil.getCompanyId())
                     .updatedBy(claimUtil.getUserName())
-                    .currency(null)
+                    .currency(Currency.VND.getCode())
                     .build());
 
             monthlyTarget.setRevenue(request.getTargetRevenue());
