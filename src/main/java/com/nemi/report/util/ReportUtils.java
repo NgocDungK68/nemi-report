@@ -1,6 +1,5 @@
 package com.nemi.report.util;
 
-import com.nemi.report.constant.Currency;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.ObjectUtils;
 import org.springframework.stereotype.Component;
@@ -35,16 +34,5 @@ public class ReportUtils {
                 .multiply(BigDecimal.valueOf(100));
 
         return percent.setScale(scale, RoundingMode.HALF_UP);  // Làm tròn 2 chữ số sau dấu phẩy
-    }
-
-    public static BigDecimal convertToUSD(BigDecimal value, BigDecimal currencyRate, int scale) {
-        return value.multiply(currencyRate).setScale(scale, RoundingMode.HALF_UP);
-    }
-
-    public static BigDecimal getValueByCurrency(BigDecimal value, Currency currency) {
-        return switch (currency) {
-            case USD -> value;
-            case VND -> null;
-        };
     }
 }

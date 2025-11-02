@@ -70,7 +70,7 @@ public class CompareChartServiceImpl implements CompareChartService {
                 log.debug("[CompareChartServiceImpl.getCompareChart] Calculating data for date={} compareDate={}", date, compareDate);
 
                 CurrencyRates currentCurrencyRate = currentCurrencyRates.currencyRateIn(date);
-                CurrencyRates previousCurrencyRate = previousCurrencyRates.currencyRateIn(date);
+                CurrencyRates previousCurrencyRate = previousCurrencyRates.currencyRateIn(compareDate);
 
                 BigDecimal presentValue = getValueByDataType(request.getDataType(), config, currentCurrencyRate);
                 BigDecimal previousValue = getValueByDataType(request.getDataType(), config, previousCurrencyRate);

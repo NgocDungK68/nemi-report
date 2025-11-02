@@ -8,7 +8,6 @@ import com.nemi.report.constant.OrderStatus;
 import com.nemi.report.entity.OrderEntity;
 import com.nemi.report.exception.TechnicalAlertCode;
 import com.nemi.report.model.request.CurrencyRates;
-import com.nemi.report.model.request.ReportTimeRange;
 import com.nemi.report.model.request.overview.OverviewReportRequest;
 import com.nemi.report.model.response.overview.ConfigResponse;
 import com.nemi.report.model.response.overview.OverviewReportResponse;
@@ -125,8 +124,7 @@ public class OverviewReportServiceImpl implements OverviewReportService {
     }
 
     public BigDecimal getProfit(CurrencyRates currencyRates) {
-        ReportTimeRange timeRange = ReportTimeRange.of(currencyRates.getFrom(), currencyRates.getTo());
-        log.debug("[OverviewReportServiceImpl.getProfit] Calculating profit for period {} to {}", timeRange.getFrom(), timeRange.getTo());
+        log.debug("[OverviewReportServiceImpl.getProfit] Calculating profit for period {} to {}", currencyRates.getFrom(), currencyRates.getTo());
 
         RevenueSummary revenueSummary = getOrderSummary(OrderStatus.getTotalOrdersStatus(), currencyRates);
         RevenueSummary returnedOrdersSummary = getOrderSummary(OrderStatus.getReturnedOrdersStatus(), currencyRates);
@@ -190,10 +188,8 @@ public class OverviewReportServiceImpl implements OverviewReportService {
         log.debug("[OverviewReportServiceImpl.getOrderSummary] Querying orders with statuses={} in range {} to {}",
                 orderStatus, currencyRates.getFrom(), currencyRates.getTo());
 
-        ReportTimeRange timeRange = ReportTimeRange.of(currencyRates.getFrom(), currencyRates.getTo());
-
         if (ObjectUtils.isEmpty(currencyRates.getCurrencyRate())) {
-            List<OrderEntity> orders = orderRepository.findByStatusInAndUpdatedAtBetween(orderStatus, timeRange.getFrom(), timeRange.getTo());
+            List<OrderEntity> orders = orderRepository.findByStatusInAndUpdatedAtBetween(orderStatus, currencyRates.getFrom(), currencyRates.getTo());
             log.debug("[OverviewReportServiceImpl.getOrderSummary] Found {} orders", orders.size());
 
             return RevenueSummary.builder()
@@ -204,7 +200,9 @@ public class OverviewReportServiceImpl implements OverviewReportService {
 
         BigDecimal revenue = BigDecimal.ZERO;
         BigDecimal numberOfOrders = BigDecimal.ZERO;
-        for (LocalDate date = currencyRates.getFrom(); !date.isAfter(currencyRates.getTo()); date = date.plusDays(1)) {
+        for (LocalDate date = currencyRates.getFrom().toLocalDate();
+             !date.isAfter(currencyRates.getTo().toLocalDate());
+             date = date.plusDays(1)) {
             BigDecimal currencyRate = currencyRates.getCurrencyRate().get(date);
             if (ObjectUtils.isEmpty(currencyRate)) {
                 log.warn("[OverviewReportServiceImpl.getOrderSummary] No currency rate found for date: {}", date);

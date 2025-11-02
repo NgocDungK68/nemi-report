@@ -11,5 +11,4 @@ public class CurrencyConfig {
     private String baseUrl;
     private String version;
     private String currencyRateUrl;
-    private String datePattern;
 }

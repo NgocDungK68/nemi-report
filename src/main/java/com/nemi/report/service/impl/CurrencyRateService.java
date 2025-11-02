@@ -8,7 +8,6 @@ import com.nemi.report.constant.Currency;
 import com.nemi.report.constant.ReportConstants;
 import com.nemi.report.exception.TechnicalAlertCode;
 import com.nemi.report.model.request.CurrencyRates;
-import com.nemi.report.model.request.ReportTimeRange;
 import com.nemi.report.model.response.CurrencyRateResponse;
 import com.nemi.util.DateUtils;
 import jakarta.annotation.Resource;
@@ -26,9 +25,9 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -101,7 +100,7 @@ public class CurrencyRateService {
 //        }
 //    }
 
-    public CurrencyRates getCurrencyRate(Integer companyId, LocalDate from, LocalDate to, Currency currency) {
+    public CurrencyRates getCurrencyRate(Integer companyId, LocalDateTime from, LocalDateTime to, Currency currency) {
         Map<LocalDate, BigDecimal> currencyRate;
 
         // Nếu là VND thì không cần quy đổi
@@ -109,7 +108,7 @@ public class CurrencyRateService {
             currencyRate = null;
         } else {
             try {
-                List<CurrencyRateResponse> currencyRateResponses = getCurrencyRate(companyId, from, to).getData();
+                List<CurrencyRateResponse> currencyRateResponses = getCurrencyRate(companyId, from.toLocalDate(), to.toLocalDate()).getData();
                 currencyRate = currencyRateResponses.stream()
                         .collect(Collectors.toMap(
                                 rate -> LocalDate.parse(rate.getDate(), DateUtils.YYYYMMDD_FORMATER),
@@ -130,5 +129,27 @@ public class CurrencyRateService {
                 .to(to)
                 .currencyRate(currencyRate)
                 .build();
+    }
+
+    public CurrencyRates getCurrencyRate(Integer companyId, LocalDate from, LocalDate to, Currency currency) {
+        return getCurrencyRate(companyId, from.atStartOfDay(), to.atTime(LocalTime.MAX), currency);
+    }
+
+    public CurrencyRates getCurrencyRateToday(Integer companyId, Currency currency) {
+        return getCurrencyRate(
+                companyId,
+                LocalDate.now().atStartOfDay(),
+                LocalDate.now().atTime(LocalTime.MAX),
+                currency
+        );
+    }
+
+    public CurrencyRates getCurrencyRatesThisMonth(Integer companyId, Currency currency) {
+        return getCurrencyRate(
+                companyId,
+                LocalDate.now().withDayOfMonth(1).atStartOfDay(),
+                LocalDate.now().atTime(LocalTime.MAX),
+                currency
+        );
     }
 }

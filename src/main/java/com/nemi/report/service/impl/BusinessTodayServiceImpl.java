@@ -8,7 +8,6 @@ import com.nemi.report.constant.OrderStatus;
 import com.nemi.report.entity.OrderEntity;
 import com.nemi.report.exception.TechnicalAlertCode;
 import com.nemi.report.model.request.CurrencyRates;
-import com.nemi.report.model.request.ReportTimeRange;
 import com.nemi.report.model.request.overview.BusinessTodayRequest;
 import com.nemi.report.model.response.overview.BusinessTodayResponse;
 import com.nemi.report.model.response.overview.ConfigResponse;
@@ -44,12 +43,9 @@ public class BusinessTodayServiceImpl implements BusinessTodayService {
         log.info("[BusinessTodayServiceImpl.getBusinessToday] Start generating today's business report with currency: {}", request.getCurrency());
 
         try {
-            ReportTimeRange timeToday = ReportTimeRange.today();
             ConfigResponse config = configService.getConfig();
-            CurrencyRates currencyRateToday = currencyRateService.getCurrencyRate(
+            CurrencyRates currencyRateToday = currencyRateService.getCurrencyRateToday(
                     claimUtil.getCompanyId(),
-                    timeToday.getFrom().toLocalDate(),
-                    timeToday.getTo().toLocalDate(),
                     request.getCurrency()
             );
 
@@ -135,11 +131,8 @@ public class BusinessTodayServiceImpl implements BusinessTodayService {
     }
 
     public BigDecimal getRevenueToday(Currency currency) {
-        ReportTimeRange timeToday = ReportTimeRange.today();
-        CurrencyRates currencyRates = currencyRateService.getCurrencyRate(
+        CurrencyRates currencyRates = currencyRateService.getCurrencyRateToday(
                 claimUtil.getCompanyId(),
-                timeToday.getFrom().toLocalDate(),
-                timeToday.getTo().toLocalDate(),
                 currency
         );
 
@@ -148,15 +141,5 @@ public class BusinessTodayServiceImpl implements BusinessTodayService {
         );
 
         return totalOrders.getRevenue();
-    }
-
-    private CurrencyRates getCurrencyRatesToday(Currency currency) {
-        ReportTimeRange timeToday = ReportTimeRange.today();
-        return currencyRateService.getCurrencyRate(
-                claimUtil.getCompanyId(),
-                timeToday.getFrom().toLocalDate(),
-                timeToday.getTo().toLocalDate(),
-                currency
-        );
     }
 }
