@@ -6,6 +6,7 @@ import com.nemi.report.configuration.ReportConfig;
 import com.nemi.report.constant.Currency;
 import com.nemi.report.constant.OrderStatus;
 import com.nemi.report.entity.MonthlyTargetEntity;
+import com.nemi.report.entity.MonthlyTargetId;
 import com.nemi.report.entity.OrderEntity;
 import com.nemi.report.exception.TechnicalAlertCode;
 import com.nemi.report.model.request.CurrencyRates;
@@ -73,7 +74,8 @@ public class MonthlyTargetServiceImpl implements MonthlyTargetService {
             ConfigResponse config = configService.getConfig();
 
             // KPI
-            Optional<MonthlyTargetEntity> monthlyTargetEntity = monthlyTargetRepository.findById(claimUtil.getDepartmentId());
+            MonthlyTargetId monthlyTargetId = new MonthlyTargetId(claimUtil.getDepartmentId(), request.getCurrency().getCode());
+            Optional<MonthlyTargetEntity> monthlyTargetEntity = monthlyTargetRepository.findById(monthlyTargetId);
             BigDecimal targetRevenue = getTarget(
                     monthlyTargetEntity.map(MonthlyTargetEntity::getRevenue).orElse(BigDecimal.ZERO),
                     currencyRates
@@ -140,7 +142,8 @@ public class MonthlyTargetServiceImpl implements MonthlyTargetService {
         log.info("[MonthlyTargetServiceImpl.updateMonthlyTarget] Updating monthly target for departmentId={}", claimUtil.getDepartmentId());
 
         try {
-            Optional<MonthlyTargetEntity> monthlyTargetEntity = monthlyTargetRepository.findById(claimUtil.getDepartmentId());
+            MonthlyTargetId monthlyTargetId = new MonthlyTargetId(claimUtil.getDepartmentId(), Currency.VND.getCode());
+            Optional<MonthlyTargetEntity> monthlyTargetEntity = monthlyTargetRepository.findById(monthlyTargetId);
 
             MonthlyTargetEntity monthlyTarget = monthlyTargetEntity.orElseGet(() -> MonthlyTargetEntity.builder()
                     .departmentId(claimUtil.getDepartmentId())
@@ -152,7 +155,6 @@ public class MonthlyTargetServiceImpl implements MonthlyTargetService {
             monthlyTarget.setRevenue(request.getTargetRevenue());
             monthlyTarget.setAdCostPerRevenue(request.getTargetAdCostPerRevenue());
             monthlyTarget.setReturnedOrderPercent(request.getTargetReturnedOrderPercent());
-            monthlyTarget.setUpdatedTime(LocalDateTime.now());
             monthlyTargetRepository.save(monthlyTarget);
             log.info("[MonthlyTargetServiceImpl.updateMonthlyTarget] Successfully updated monthly target for departmentId={}", claimUtil.getDepartmentId());
         } catch (Exception e) {

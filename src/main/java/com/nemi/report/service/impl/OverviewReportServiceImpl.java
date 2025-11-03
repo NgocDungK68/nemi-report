@@ -42,11 +42,9 @@ public class OverviewReportServiceImpl implements OverviewReportService {
     private final ClaimUtil claimUtil;
 
     private int percentScale;
-    private int usdScale;
 
     @PostConstruct
     public void init() {
-        usdScale = reportConfig.getScale().getUsd();
         percentScale = reportConfig.getScale().getPercent();
     }
 

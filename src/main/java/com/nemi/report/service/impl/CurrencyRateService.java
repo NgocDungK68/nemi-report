@@ -55,7 +55,7 @@ public class CurrencyRateService {
                     .queryParam(ReportConstants.TO, to.format(DateTimeFormatter.ISO_DATE))
                     .toUriString();
 
-            log.debug("[CurrencyRateService.getCurrencyRate] Calling URL: {}]", restTemplate.getUriTemplateHandler().expand(relativeUri));
+            log.debug("[CurrencyRateService.getCurrencyRate] Calling URL: {}", restTemplate.getUriTemplateHandler().expand(relativeUri));
 
             HttpHeaders headers = new HttpHeaders();
             headers.setBasicAuth(serviceUsername, servicePassword);
@@ -76,29 +76,6 @@ public class CurrencyRateService {
             throw new RuntimeException(e);
         }
     }
-
-//    public Map<LocalDate, BigDecimal> getCurrencyRate(Integer companyId, LocalDate from, LocalDate to, Currency currency) {
-//        if (currency.equals(Currency.VND)) {
-//            return null;
-//        }
-//
-//        try {
-//            List<CurrencyRateResponse> currencyRateResponses = getCurrencyRate(companyId, from, to).getData();
-//
-//            return currencyRateResponses.stream()
-//                    .collect(Collectors.toMap(
-//                            rate -> LocalDate.parse(rate.getDate(), DateTimeFormatter.ofPattern(currencyConfig.getDatePattern())),
-//                            rate -> rate.getExchangeRates().stream()
-//                                    .filter(er -> er.getCurrency().equals(Currency.VND.getCode()))
-//                                    .findFirst()
-//                                    .map(CurrencyRateResponse.ExchangeRate::getRate)
-//                                    .orElseThrow(() ->
-//                                            new TechnicalException(AlertMessages.alert(TechnicalAlertCode.CURRENCY_RATE_ERROR))))
-//                    );
-//        } catch (Exception e) {
-//            throw new RuntimeException(e);
-//        }
-//    }
 
     public CurrencyRates getCurrencyRate(Integer companyId, LocalDateTime from, LocalDateTime to, Currency currency) {
         Map<LocalDate, BigDecimal> currencyRate;

@@ -55,7 +55,7 @@ report:
   base-url: https://nemi-dev-02.ecombase.net/nemi-report
   scale:
     vnd: 0
-    usd: 2
+    other: 2
     percent: 2
   date-pattern: "dd/MM/yyyy"
   business-today:
@@ -79,3 +79,6 @@ currency:
   base-url: https://nemi-dev-02.ecombase.net/nemi-system-manager
   version: v1
   currency-rate-url: currency-rate
+  type:
+    - USD
+    - VND
