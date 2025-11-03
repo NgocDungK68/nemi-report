@@ -57,6 +57,7 @@ report:
     vnd: 0
     other: 2
     percent: 2
+    rate: 10
   date-pattern: "dd/MM/yyyy"
   business-today:
     hour-frame:

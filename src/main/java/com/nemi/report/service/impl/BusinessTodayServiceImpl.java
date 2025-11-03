@@ -109,6 +109,21 @@ public class BusinessTodayServiceImpl implements BusinessTodayService {
         }
     }
 
+    @Override
+    public BigDecimal getRevenueToday(Currency currency) {
+        CurrencyRates currencyRates = currencyRateService.getCurrencyRateToday(
+                claimUtil.getCompanyId(),
+                currency
+        );
+
+        BusinessTodayResponse.OrderData totalOrders = convertToOrderData(
+                overviewReportService.getOrderSummary(OrderStatus.getTotalOrdersStatus(), currencyRates)
+        );
+
+        return totalOrders.getRevenue();
+    }
+
+
     private BusinessTodayResponse.OrderData convertToOrderData(RevenueSummary revenueSummary) {
         return BusinessTodayResponse.OrderData.builder()
                 .revenue(revenueSummary.getRevenue())
@@ -130,16 +145,4 @@ public class BusinessTodayServiceImpl implements BusinessTodayService {
         return orderRevenue;
     }
 
-    public BigDecimal getRevenueToday(Currency currency) {
-        CurrencyRates currencyRates = currencyRateService.getCurrencyRateToday(
-                claimUtil.getCompanyId(),
-                currency
-        );
-
-        BusinessTodayResponse.OrderData totalOrders = convertToOrderData(
-                overviewReportService.getOrderSummary(OrderStatus.getTotalOrdersStatus(), currencyRates)
-        );
-
-        return totalOrders.getRevenue();
-    }
 }
