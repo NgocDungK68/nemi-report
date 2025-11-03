@@ -280,20 +280,27 @@ public class MonthlyTargetServiceImpl implements MonthlyTargetService {
     }
 
 
+    /**
+     * Chuyển giá trị theo tiền tệ
+     * @param value giá trị ban đầu
+     * @param currency tiền tệ
+     * @param exchangeRates tỉ giá
+     * @return giá trị mới
+     */
     private BigDecimal getValueWithCurrency(BigDecimal value,
                                             String currency,
                                             List<CurrencyRateResponse.ExchangeRate> exchangeRates) {
         if (currency.equals(Currency.VND.getCode())) {
             return value;
         } else {
-            CurrencyRateResponse.ExchangeRate exchangeRate = currencyRateService.getExchangeRate(currency, exchangeRates);
-            BigDecimal rate = exchangeRate.getRate();
+            BigDecimal vndRate = currencyRateService.getExchangeRate(Currency.VND.getCode(), exchangeRates).getRate();
             if (!currency.equals(Currency.USD.getCode())) {
-                BigDecimal vndRate = currencyRateService.getExchangeRate(Currency.VND.getCode(), exchangeRates).getRate();
+                BigDecimal rate = currencyRateService.getExchangeRate(currency, exchangeRates).getRate();
                 rate = vndRate.divide(rate, reportConfig.getScale().getRate(), RoundingMode.HALF_UP);
+                return value.multiply(rate);
             }
 
-            return value.multiply(rate);
+            return value.multiply(vndRate);
         }
     }
 }
