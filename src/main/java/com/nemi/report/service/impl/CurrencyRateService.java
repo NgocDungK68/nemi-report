@@ -69,11 +69,12 @@ public class CurrencyRateService {
             if (response.getStatusCode().is2xxSuccessful()) {
                 return response.getBody();
             } else {
-                log.error("Currency API returned non-2xx status: {}", response.getStatusCode());
-                throw new RuntimeException("Currency API returned non-2xx status: " + response.getStatusCode());
+                log.error("[CurrencyRateService.getCurrencyRate] Currency API returned non-2xx status: {}", response.getStatusCode());
+                throw new TechnicalException(AlertMessages.alert(TechnicalAlertCode.CURRENCY_RATE_ERROR));
             }
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            log.error("[CurrencyRateService.getCurrencyRate] Failed to get currency rate: {}", e.getMessage(), e);
+            throw new TechnicalException(AlertMessages.alert(TechnicalAlertCode.CURRENCY_RATE_ERROR));
         }
     }
 
@@ -84,21 +85,17 @@ public class CurrencyRateService {
         if (currency.equals(Currency.VND)) {
             currencyRate = null;
         } else {
-            try {
-                List<CurrencyRateResponse> currencyRateResponses = getCurrencyRate(companyId, from.toLocalDate(), to.toLocalDate()).getData();
-                currencyRate = currencyRateResponses.stream()
-                        .collect(Collectors.toMap(
-                                rate -> LocalDate.parse(rate.getDate(), DateUtils.YYYYMMDD_FORMATER),
-                                rate -> rate.getExchangeRates().stream()
-                                        .filter(er -> er.getCurrency().equals(Currency.VND.getCode()))
-                                        .findFirst()
-                                        .map(CurrencyRateResponse.ExchangeRate::getRate)
-                                        .orElseThrow(() ->
-                                                new TechnicalException(AlertMessages.alert(TechnicalAlertCode.CURRENCY_RATE_ERROR))))
-                        );
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
+            List<CurrencyRateResponse> currencyRateResponses = getCurrencyRate(companyId, from.toLocalDate(), to.toLocalDate()).getData();
+            currencyRate = currencyRateResponses.stream()
+                    .collect(Collectors.toMap(
+                            rate -> LocalDate.parse(rate.getDate(), DateUtils.YYYYMMDD_FORMATER),
+                            rate -> rate.getExchangeRates().stream()
+                                    .filter(er -> er.getCurrency().equals(Currency.VND.getCode()))
+                                    .findFirst()
+                                    .map(CurrencyRateResponse.ExchangeRate::getRate)
+                                    .orElseThrow(() ->
+                                            new TechnicalException(AlertMessages.alert(TechnicalAlertCode.CURRENCY_RATE_ERROR))))
+                    );
         }
 
         return CurrencyRates.builder()
@@ -106,6 +103,11 @@ public class CurrencyRateService {
                 .to(to)
                 .currencyRate(currencyRate)
                 .build();
+    }
+
+    public List<CurrencyRateResponse.ExchangeRate> getCurrencyRateToday(Integer companyId, LocalDate date) {
+        CurrencyRateResponse currencyRateResponse = getCurrencyRate(companyId, date, date).getData().get(0);
+        return currencyRateResponse.getExchangeRates();
     }
 
     public CurrencyRates getCurrencyRate(Integer companyId, LocalDate from, LocalDate to, Currency currency) {
@@ -128,5 +130,12 @@ public class CurrencyRateService {
                 LocalDate.now().atTime(LocalTime.MAX),
                 currency
         );
+    }
+
+    public CurrencyRateResponse.ExchangeRate getExchangeRate(String currency, List<CurrencyRateResponse.ExchangeRate> exchangeRates) {
+        return exchangeRates.stream()
+                .filter(er -> er.getCurrency().equals(currency))
+                .findFirst()
+                .orElseThrow(() -> new TechnicalException(AlertMessages.alert(TechnicalAlertCode.CURRENCY_RATE_ERROR)));
     }
 }

@@ -10,4 +10,13 @@ public enum Currency {
     USD("USD");
 
     private final String code;
+
+    public static Currency fromCode(String code) {
+        for (Currency type : values()) {
+            if (type.code.equals(code)) {
+                return type;
+            }
+        }
+        throw new IllegalArgumentException("Unknown currency code: " + code);
+    }
 }
