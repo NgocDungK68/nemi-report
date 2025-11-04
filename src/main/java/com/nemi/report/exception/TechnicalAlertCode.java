@@ -16,6 +16,7 @@ public enum TechnicalAlertCode implements IAlertCode {
     COMPARE_CHART_ERROR("500006", "Lỗi khi tạo biểu đồ so sánh", AlertType.ERROR),
     CONFIG_UPDATE_ERROR("500007", "Lỗi khi cập nhật cấu hình người dùng", AlertType.ERROR),
     MONTHLY_TARGET_ERROR("500008", "Lỗi khi tạo báo cáo chỉ tiêu tháng", AlertType.ERROR),
+    CURRENCY_RATE_ERROR("500009", "Lỗi khi lấy tỉ giá", AlertType.ERROR),
     ;
 
     private final AlertCode alertCode;
