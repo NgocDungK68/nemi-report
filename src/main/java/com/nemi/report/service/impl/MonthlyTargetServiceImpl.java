@@ -23,6 +23,7 @@ import com.nemi.report.repository.OrderRepository;
 import com.nemi.report.service.ConfigService;
 import com.nemi.report.service.MonthlyTargetService;
 import com.nemi.report.util.DateUtils;
+import com.nemi.report.util.ValidationUtils;
 import com.nemi.util.ClaimUtil;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
@@ -137,6 +138,9 @@ public class MonthlyTargetServiceImpl implements MonthlyTargetService {
         log.info("[MonthlyTargetServiceImpl.updateMonthlyTarget] Updating monthly target for departmentId={}", claimUtil.getDepartmentId());
 
         try {
+            ValidationUtils.validatePercent(request.getTargetAdCostPerRevenue());
+            ValidationUtils.validatePercent(request.getTargetReturnedOrderPercent());
+
             List<CurrencyRateResponse.ExchangeRate> exchangeRates = currencyRateService.getCurrencyRateToday(claimUtil.getCompanyId(), LocalDate.now());
             List<MonthlyTargetEntity> monthlyTargetList = new ArrayList<>();
             List<String> currencyList = new ArrayList<>();
@@ -267,8 +271,8 @@ public class MonthlyTargetServiceImpl implements MonthlyTargetService {
                     .build());
 
             monthlyTarget.setRevenue(getValueWithCurrency(request.getTargetRevenue(), currency, exchangeRates));
-            monthlyTarget.setAdCostPerRevenue(getValueWithCurrency(request.getTargetAdCostPerRevenue(), currency, exchangeRates));
-            monthlyTarget.setReturnedOrderPercent(getValueWithCurrency(request.getTargetReturnedOrderPercent(), currency, exchangeRates));
+            monthlyTarget.setAdCostPerRevenue(request.getTargetAdCostPerRevenue());
+            monthlyTarget.setReturnedOrderPercent(request.getTargetReturnedOrderPercent());
             monthlyTarget.setUpdatedBy(claimUtil.getUserName());
             monthlyTarget.setUpdatedAt(LocalDateTime.now());
 

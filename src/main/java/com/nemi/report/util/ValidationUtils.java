@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 @Component
@@ -16,6 +17,13 @@ public class ValidationUtils {
     public static void validateTimeRange(LocalDate from, LocalDate to) {
         if (from.isAfter(to)) {
             log.error("Invalid date range: from={}, to={}", from, to);
+            throw new ValidationException(AlertMessages.alert(ValidationAlertCode.DATA_INVALID));
+        }
+    }
+
+    public static void validatePercent(BigDecimal percent) {
+        if (percent.compareTo(BigDecimal.ZERO) < 0 || percent.compareTo(BigDecimal.valueOf(100)) > 0) {
+            log.error("Invalid percent: {}", percent);
             throw new ValidationException(AlertMessages.alert(ValidationAlertCode.DATA_INVALID));
         }
     }
