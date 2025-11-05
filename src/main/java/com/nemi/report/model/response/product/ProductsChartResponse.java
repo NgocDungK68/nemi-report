@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 
 @Data
@@ -11,26 +12,35 @@ public class ProductsChartResponse {
     @JsonProperty("totalElements")
     private Integer totalElements;
 
-    @JsonProperty("userData")
-    private List<UserData> userData;
+    @JsonProperty("productData")
+    private List<ProductData> productData;
 
     @JsonProperty("summary")
     private Summary summary;
 
     @Data
-    public static class UserData {
+    public static class ProductData {
         @JsonProperty("product")
-        private ProductData product;
+        private Product product;
 
-        @JsonProperty("date")
-        private DateData date;
+        @JsonProperty("data")
+        private DataValue data;
 
         @JsonProperty("dateValues")
-        private List<DateValues> dateValues;
+        private List<DateValue> dateValues;
     }
 
     @Data
-    public static class ProductData {
+    public static class Summary {
+        @JsonProperty("value")
+        private BigDecimal value;
+
+        @JsonProperty("percent")
+        private BigDecimal percent;
+    }
+
+    @Data
+    public static class Product {
         @JsonProperty("id")
         private String id;
 
@@ -39,7 +49,7 @@ public class ProductsChartResponse {
     }
 
     @Data
-    public static class DateData {
+    public static class DataValue {
         @JsonProperty("value")
         private BigDecimal value;
 
@@ -48,19 +58,10 @@ public class ProductsChartResponse {
     }
 
     @Data
-    public static class DateValues {
+    public static class DateValue {
         @JsonProperty("date")
-        private String date; // dd/MM/yyyy format
+        private LocalDate date; // dd/MM/yyyy format
 
-        @JsonProperty("value")
-        private BigDecimal value;
-
-        @JsonProperty("percent")
-        private BigDecimal percent;
-    }
-
-    @Data
-    public static class Summary {
         @JsonProperty("value")
         private BigDecimal value;
 
