@@ -168,17 +168,15 @@ public class MonthlyTargetServiceImpl implements MonthlyTargetService {
      * @return [revenueToday / (targetRevenue / số ngày trong tháng)] * 100
      */
     private BigDecimal getTodayRevenuePercent(BigDecimal revenueToday, BigDecimal targetRevenue) {
-        int scale = reportConfig.getScale().getPercent() + 2;
         BigDecimal targetRevenuePerDay = targetRevenue.divide(
-                BigDecimal.valueOf(DateUtils.getDaysInMonth()), scale, RoundingMode.HALF_UP
+                BigDecimal.valueOf(DateUtils.getDaysInMonth()), RoundingMode.HALF_UP
         );
         if (revenueToday.compareTo(targetRevenuePerDay) >= 0) return BigDecimal.valueOf(100);
 
         return revenueToday
                 .divide(targetRevenue.divide(
-                                BigDecimal.valueOf(DateUtils.getDaysInMonth()), scale, RoundingMode.HALF_UP
-                        ),
-                        scale, RoundingMode.HALF_UP)
+                                BigDecimal.valueOf(DateUtils.getDaysInMonth()), RoundingMode.HALF_UP
+                        ),RoundingMode.HALF_UP)
                 .multiply(BigDecimal.valueOf(100))
                 .setScale(percentScale, RoundingMode.HALF_UP);
     }
@@ -209,7 +207,7 @@ public class MonthlyTargetServiceImpl implements MonthlyTargetService {
 
         return returnedOrders
                 .divide(
-                        totalOrders, reportConfig.getScale().getPercent() + 2, RoundingMode.HALF_UP
+                        totalOrders, RoundingMode.HALF_UP
                 )
                 .multiply(BigDecimal.valueOf(100))
                 .setScale(percentScale, RoundingMode.HALF_UP);
@@ -221,7 +219,6 @@ public class MonthlyTargetServiceImpl implements MonthlyTargetService {
         }
         return adCost.divide(
                 totalOrders,
-                reportConfig.getScale().getPercent() + 2,
                 RoundingMode.HALF_UP
         );
     }
@@ -250,7 +247,7 @@ public class MonthlyTargetServiceImpl implements MonthlyTargetService {
     private BigDecimal getTargetRevenueProcess(BigDecimal totalRevenue, BigDecimal targetRevenue) {
         if (totalRevenue.compareTo(targetRevenue) >= 0) return BigDecimal.valueOf(100);
         return totalRevenue
-                .divide(targetRevenue, reportConfig.getScale().getPercent() + 2, RoundingMode.HALF_UP)
+                .divide(targetRevenue, RoundingMode.HALF_UP)
                 .multiply(BigDecimal.valueOf(100))
                 .setScale(percentScale, RoundingMode.HALF_UP);
     }
