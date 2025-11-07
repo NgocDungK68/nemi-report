@@ -1,4 +1,4 @@
-package com.nemi.report.model.request.product;
+package com.nemi.report.model.request;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.nemi.report.constant.ChartData;
@@ -10,7 +10,7 @@ import lombok.Data;
 import java.time.LocalDate;
 
 @Data
-public class ProductChartRequest {
+public class ReportChartRequest {
     @NotNull
     private ChartData chartData;
 
