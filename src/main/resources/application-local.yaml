@@ -22,9 +22,11 @@ spring:
           order_inserts: true
           order_updates: true
         dialect: org.hibernate.dialect.PostgreSQLDialect
+  config:
+    import: classpath:report-column-config.yml
 
 server:
-  port: 5200
+  port: 5204
   error:
     include-stacktrace: never
 secret:
