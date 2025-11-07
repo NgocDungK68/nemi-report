@@ -30,7 +30,7 @@ public class ReportUtils {
         // Nếu kỳ trước khác 0 => tính theo công thức
         BigDecimal diff = current.subtract(previous);
         BigDecimal percent = diff
-                .divide(previous, scale + 2, RoundingMode.HALF_UP)
+                .divide(previous, RoundingMode.HALF_UP)
                 .multiply(BigDecimal.valueOf(100));
 
         return percent.setScale(scale, RoundingMode.HALF_UP);  // Làm tròn 2 chữ số sau dấu phẩy

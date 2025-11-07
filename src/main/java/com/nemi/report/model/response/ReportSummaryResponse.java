@@ -1,14 +1,14 @@
-package com.nemi.report.model.response.product;
+package com.nemi.report.model.response;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 
-import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
 @Data
-public class ProductDailyResponse {
+public class ReportSummaryResponse {
+
     @JsonProperty("totalElements")
     private Long totalElements;
 
@@ -24,7 +24,7 @@ public class ProductDailyResponse {
     @Data
     public static class DataItem {
         @JsonProperty("date")
-        private LocalDate date; // dd/MM/yyyy format
+        private String date; // dd/MM/yyyy format
 
         @JsonProperty("extraData")
         private Map<String, Object> extraData;

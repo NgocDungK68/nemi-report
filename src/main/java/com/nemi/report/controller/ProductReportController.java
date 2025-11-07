@@ -1,7 +1,7 @@
 package com.nemi.report.controller;
 
-import com.nemi.report.model.request.product.ProductChartRequest;
-import com.nemi.report.model.request.product.ProductSummaryRequest;
+import com.nemi.report.model.request.ReportSummaryRequest;
+import com.nemi.report.model.request.ReportChartRequest;
 import com.nemi.report.model.response.product.ProductChartResponse;
 import com.nemi.report.model.response.product.ProductDailyResponse;
 import com.nemi.report.model.response.product.ProductSummaryResponse;
@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class ProductReportController {
     @PostMapping("/summary")
-    public ResponseEntity<ProductSummaryResponse> getProductSummary(@RequestBody ProductSummaryRequest request) {
+    public ResponseEntity<ProductSummaryResponse> getProductSummary(@RequestBody ReportSummaryRequest request) {
         // TODO: Implement service call
         // ProductSummaryResponse response = productSummaryService.getProductSummary(request);
 
@@ -31,7 +31,7 @@ public class ProductReportController {
     @PostMapping("/{productId}")
     public ResponseEntity<ProductDailyResponse> getProductSummary(
             @PathVariable(name = "productId") String productId,
-            @RequestBody ProductSummaryRequest request
+            @RequestBody ReportSummaryRequest request
     ) {
         // TODO: Implement service call
         // ProductDailyResponse response = productSummaryService.getProductDaily(productId, request);
@@ -42,7 +42,7 @@ public class ProductReportController {
     }
 
     @PostMapping("/products-chart")
-    public ResponseEntity<ProductsChartResponse> getProductsChart(@RequestBody ProductChartRequest request) {
+    public ResponseEntity<ProductsChartResponse> getProductsChart(@RequestBody ReportChartRequest request) {
         // TODO: Implement service call
         // ProductsChartResponse response = productChartService.getProductsChart(request);
 
@@ -54,7 +54,7 @@ public class ProductReportController {
     @PostMapping("/product-chart/{productId}")
     public ResponseEntity<ProductChartResponse> getProductChart(
             @PathVariable(name = "productId") String productId,
-            @RequestBody ProductChartRequest request
+            @RequestBody ReportChartRequest request
     ) {
         // TODO: Implement service call
         // ProductChartResponse response = productChartService.getProductChart(productId, request);
