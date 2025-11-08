@@ -1,6 +1,7 @@
 package com.nemi.report.model.response.product;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.nemi.report.entity.ProductEntity;
 import lombok.Data;
 
 import java.util.List;
@@ -40,4 +41,16 @@ public class ProductSummaryResponse {
         @JsonProperty("image")
         private String imageUrl;
     }
+
+    public static List<ProductData> toProductData(List<ProductEntity> productEntities){
+        return productEntities.stream().map(entity -> {
+            ProductData productData = new ProductData();
+            productData.setId(entity.getProductId());
+            productData.setName(entity.getName());
+            productData.setImageUrl(entity.getImages());
+            return productData;
+        }).toList();
+
+    }
+
 }

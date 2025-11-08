@@ -2,8 +2,8 @@ package com.nemi.report.model.request.product;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.nemi.report.constant.Currency;
-import com.nemi.report.constant.FilterType;
-import com.nemi.report.constant.OrderSort;
+import com.nemi.report.model.request.ColumnRequest;
+import com.nemi.report.model.request.FilterRequest;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
@@ -29,27 +29,9 @@ public class ProductSummaryRequest {
     @NotNull
     private Integer size;
 
-    private List<ColumnConfig> columns;
+    private List<ColumnRequest> columns;
 
-    private List<FilterConfig> filters;
+    private List<FilterRequest> filters;
 
-    @Data
-    public static class ColumnConfig {
-        @NotNull
-        private String code;
-
-        @NotNull
-        private OrderSort order;
-    }
-
-    @Data
-    public static class FilterConfig {
-        @NotNull
-        private String code;
-
-        @NotNull
-        private FilterType type;
-
-        private List<String> value;
-    }
 }
+
