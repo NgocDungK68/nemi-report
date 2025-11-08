@@ -2,7 +2,6 @@ package com.nemi.report.model;
 
 import com.nemi.report.constant.FilterType;
 import com.nemi.report.model.config.ColumnConfig;
-import com.nemi.report.model.request.marketing.MarketingSummaryRequest;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;

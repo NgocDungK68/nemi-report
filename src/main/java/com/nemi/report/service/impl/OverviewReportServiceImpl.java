@@ -3,11 +3,12 @@ package com.nemi.report.service.impl;
 import com.nemi.exception.TechnicalException;
 import com.nemi.exception.pojo.AlertMessages;
 import com.nemi.report.configuration.ReportConfig;
+import com.nemi.report.constant.Currency;
 import com.nemi.report.constant.OrderStatus;
 import com.nemi.report.entity.OrderEntity;
 import com.nemi.report.exception.TechnicalAlertCode;
+import com.nemi.report.model.request.CurrencyRates;
 import com.nemi.report.model.request.overview.OverviewReportRequest;
-import com.nemi.report.model.request.ReportTimeRange;
 import com.nemi.report.model.response.overview.ConfigResponse;
 import com.nemi.report.model.response.overview.OverviewReportResponse;
 import com.nemi.report.model.response.overview.RevenueSummary;
@@ -16,12 +17,15 @@ import com.nemi.report.service.ConfigService;
 import com.nemi.report.service.OverviewReportService;
 import com.nemi.report.util.ReportUtils;
 import com.nemi.report.util.ValidationUtils;
+import com.nemi.util.ClaimUtil;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.ObjectUtils;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
@@ -34,11 +38,13 @@ public class OverviewReportServiceImpl implements OverviewReportService {
     private final OrderRepository orderRepository;
     private final ConfigService configService;
     private final ReportConfig reportConfig;
+    private final CurrencyRateService currencyRateService;
+    private final ClaimUtil claimUtil;
 
     private int percentScale;
 
     @PostConstruct
-    public void init(){
+    public void init() {
         percentScale = reportConfig.getScale().getPercent();
     }
 
@@ -49,26 +55,27 @@ public class OverviewReportServiceImpl implements OverviewReportService {
 
         ValidationUtils.validateTimeRange(request.getFrom(), request.getTo());
         ConfigResponse config = configService.getConfig();
+        Currency currency = request.getCurrency();
 
         List<String> totalOrderStatus = OrderStatus.getTotalOrdersStatus();
         List<String> returnedOrdersStatus = config.getReturnOrderWhen().getOrderStatus();
         List<String> confirmedOrderStatus = config.getConfirmOrderWhen().getOrderStatus();
         List<String> deliveringOrderStatus = OrderStatus.getDeliveringOrdersStatus();
 
-        LocalDateTime from = request.getFrom().atStartOfDay();
-        LocalDateTime to = request.getTo().atTime(LocalTime.MAX);
-        LocalDateTime compareFrom = from.minusDays(request.getCompareWith().getDays());
-        LocalDateTime compareTo = to.minusDays(request.getCompareWith().getDays());
-        ReportTimeRange currentPeriod = ReportTimeRange.of(from, to);
-        ReportTimeRange previousPeriod = ReportTimeRange.of(compareFrom, compareTo);
+        LocalDate from = request.getFrom();
+        LocalDate to = request.getTo();
+        LocalDate compareFrom = from.minusDays(request.getCompareWith().getDays());
+        LocalDate compareTo = to.minusDays(request.getCompareWith().getDays());
+        CurrencyRates currentCurrencyRates = currencyRateService.getCurrencyRate(claimUtil.getCompanyId(), from, to, currency);
+        CurrencyRates periodCurrencyRates = currencyRateService.getCurrencyRate(claimUtil.getCompanyId(), compareFrom, compareTo, currency);
 
         try {
-            OverviewReportResponse.OrderData totalRevenueData = getOrderData(currentPeriod, previousPeriod, totalOrderStatus);
-            OverviewReportResponse.OrderData returnedOrdersData = getOrderData(currentPeriod, previousPeriod, returnedOrdersStatus);
-            OverviewReportResponse.OrderData confirmedOrdersData = getOrderData(currentPeriod, previousPeriod, confirmedOrderStatus);
-            OverviewReportResponse.OrderData deliveringOrdersData = getOrderData(currentPeriod, previousPeriod, deliveringOrderStatus);
-            OverviewReportResponse.CostData adCostData = getAdCostData(currentPeriod, previousPeriod);
-            OverviewReportResponse.ProfitData profitData = getProfitData(currentPeriod, previousPeriod);
+            OverviewReportResponse.OrderData totalRevenueData = getOrderData(totalOrderStatus, currentCurrencyRates, periodCurrencyRates);
+            OverviewReportResponse.OrderData returnedOrdersData = getOrderData(returnedOrdersStatus, currentCurrencyRates, periodCurrencyRates);
+            OverviewReportResponse.OrderData confirmedOrdersData = getOrderData(confirmedOrderStatus, currentCurrencyRates, periodCurrencyRates);
+            OverviewReportResponse.OrderData deliveringOrdersData = getOrderData(deliveringOrderStatus, currentCurrencyRates, periodCurrencyRates);
+            OverviewReportResponse.CostData adCostData = getAdCostData(currentCurrencyRates, periodCurrencyRates);
+            OverviewReportResponse.ProfitData profitData = getProfitData(currentCurrencyRates, periodCurrencyRates);
 
             log.info("[OverviewReportServiceImpl.getOverviewReport] Successfully generated overview report for period {} to {}", request.getFrom(), request.getTo());
 
@@ -86,14 +93,93 @@ public class OverviewReportServiceImpl implements OverviewReportService {
         }
     }
 
-    private OverviewReportResponse.OrderData getOrderData(ReportTimeRange currentPeriod,
-                                                          ReportTimeRange previousPeriod,
-                                                          List<String> orderStatus) {
-        log.debug("[OverviewReportServiceImpl.getOrderData] Getting orders for statuses: {} | Current: {} to {} | Previous: {} to {}",
-                orderStatus, currentPeriod.getFrom(), currentPeriod.getTo(), previousPeriod.getFrom(), previousPeriod.getTo());
+    /**
+     * Hàm trả về doanh thu và số lượng orders
+     */
+    @Override
+    public RevenueSummary getOrderSummary(List<String> orderStatus, CurrencyRates currencyRates) {
+        log.debug("[OverviewReportServiceImpl.getOrderSummary] Querying orders with statuses={} in range {} to {}",
+                orderStatus, currencyRates.getFrom(), currencyRates.getTo());
 
-        RevenueSummary currentOrders = getOrderSummary(currentPeriod, orderStatus);
-        RevenueSummary previousOrders = getOrderSummary(previousPeriod, orderStatus);
+        if (ObjectUtils.isEmpty(currencyRates.getCurrencyRate())) {
+            List<OrderEntity> orders = orderRepository.findByStatusInAndUpdatedAtBetween(orderStatus, currencyRates.getFrom(), currencyRates.getTo());
+            log.debug("[OverviewReportServiceImpl.getOrderSummary] Found {} orders", orders.size());
+
+            return RevenueSummary.builder()
+                    .revenue(getOrderRevenue(orders))
+                    .number(BigDecimal.valueOf(orders.size()))
+                    .build();
+        }
+
+        BigDecimal revenue = BigDecimal.ZERO;
+        BigDecimal numberOfOrders = BigDecimal.ZERO;
+        for (LocalDate date = currencyRates.getFrom().toLocalDate();
+             !date.isAfter(currencyRates.getTo().toLocalDate());
+             date = date.plusDays(1)) {
+            BigDecimal currencyRate = currencyRates.getCurrencyRate().get(date);
+            if (ObjectUtils.isEmpty(currencyRate)) {
+                log.warn("[OverviewReportServiceImpl.getOrderSummary] No currency rate found for date: {}", date);
+                continue;
+            }
+
+            LocalDateTime startOfDate = date.atStartOfDay();
+            LocalDateTime endOfDate = date.atTime(LocalTime.MAX);
+            List<OrderEntity> orders = orderRepository.findByStatusInAndUpdatedAtBetween(orderStatus, startOfDate, endOfDate);
+            BigDecimal orderRevenue = getOrderRevenue(orders).multiply(currencyRate);
+
+            revenue = revenue.add(orderRevenue);
+            numberOfOrders = numberOfOrders.add(BigDecimal.valueOf(orders.size()));
+        }
+
+        return RevenueSummary.builder()
+                .revenue(revenue)
+                .number(numberOfOrders)
+                .build();
+    }
+
+    @Override
+    public BigDecimal getOrderRevenue(List<OrderEntity> orders) {
+        return orders.stream()
+                .map(OrderEntity::getTotalPrice)
+                .filter(Objects::nonNull)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    /**
+     * Lấy doanh thu và số lượng ads (chưa xử lý)
+     */
+    @Override
+    public RevenueSummary getAdsSummary(CurrencyRates currencyRates) {
+        // TODO: code adCost
+        return RevenueSummary.builder()
+                .revenue(BigDecimal.ZERO)
+                .number(BigDecimal.ZERO)
+                .build();
+    }
+
+    @Override
+    public BigDecimal getProfit(CurrencyRates currencyRates) {
+        log.debug("[OverviewReportServiceImpl.getProfit] Calculating profit for period {} to {}", currencyRates.getFrom(), currencyRates.getTo());
+
+        RevenueSummary revenueSummary = getOrderSummary(OrderStatus.getTotalOrdersStatus(), currencyRates);
+        RevenueSummary returnedOrdersSummary = getOrderSummary(OrderStatus.getReturnedOrdersStatus(), currencyRates);
+        RevenueSummary adsSummary = getAdsSummary(currencyRates);
+
+        BigDecimal profit = revenueSummary.getRevenue()
+                .subtract(adsSummary.getRevenue().add(returnedOrdersSummary.getRevenue()));
+
+        log.debug("[OverviewReportServiceImpl.getProfit] Profit computed: {}", profit);
+        return profit;
+    }
+
+    private OverviewReportResponse.OrderData getOrderData(List<String> orderStatus,
+                                                          CurrencyRates currentCurrencyRates,
+                                                          CurrencyRates periodCurrencyRates) {
+        log.debug("[OverviewReportServiceImpl.getOrderData] Getting orders for statuses: {} | Current: {} to {} | Previous: {} to {}",
+                orderStatus, currentCurrencyRates.getFrom(), currentCurrencyRates.getTo(), periodCurrencyRates.getFrom(), periodCurrencyRates.getTo());
+
+        RevenueSummary currentOrders = getOrderSummary(orderStatus, currentCurrencyRates);
+        RevenueSummary previousOrders = getOrderSummary(orderStatus, periodCurrencyRates);
 
         BigDecimal currentRevenue = currentOrders.getRevenue();
         BigDecimal previousRevenue = previousOrders.getRevenue();
@@ -114,57 +200,12 @@ public class OverviewReportServiceImpl implements OverviewReportService {
                 .build();
     }
 
-    /**
-     * Hàm trả về doanh thu và số lượng orders
-     */
-    public RevenueSummary getOrderSummary(ReportTimeRange period, List<String> orderStatus) {
-        log.debug("[OverviewReportServiceImpl.getOrderSummary] Querying orders with statuses={} in range {} to {}",
-                orderStatus, period.getFrom(), period.getTo());
 
-        LocalDateTime from = period.getFrom();
-        LocalDateTime to = period.getTo();
-        List<OrderEntity> orders = orderRepository.findByStatusInAndUpdatedAtBetween(orderStatus, from, to);
-        log.debug("[OverviewReportServiceImpl.getOrderSummary] Found {} orders", orders.size());
-
-        return RevenueSummary.builder()
-                .revenue(getOrderRevenue(orders))
-                .number(BigDecimal.valueOf(orders.size()))
-                .build();
-    }
-
-    public BigDecimal getProfit(ReportTimeRange period) {
-        log.debug("[OverviewReportServiceImpl.getProfit] Calculating profit for period {} to {}", period.getFrom(), period.getTo());
-
-        RevenueSummary revenueSummary = getOrderSummary(period, OrderStatus.getTotalOrdersStatus());
-        RevenueSummary returnedOrdersSummary = getOrderSummary(period, OrderStatus.getReturnedOrdersStatus());
-        RevenueSummary adsSummary = getAdsSummary(period);
-
-        BigDecimal profit = revenueSummary.getRevenue()
-                .subtract(adsSummary.getRevenue().add(returnedOrdersSummary.getRevenue()));
-
-        log.debug("[OverviewReportServiceImpl.getProfit] Profit computed: {}", profit);
-        return profit;
-    }
-
-    /**
-     * Lấy doanh thu và số lượng ads (chưa xử lý)
-     */
-    public RevenueSummary getAdsSummary(ReportTimeRange period) {
-        LocalDateTime from = period.getFrom();
-        LocalDateTime to = period.getTo();
-
-        // TODO: code adCost
-        return RevenueSummary.builder()
-                .revenue(BigDecimal.ZERO)
-                .number(BigDecimal.ZERO)
-                .build();
-    }
-
-    private OverviewReportResponse.ProfitData getProfitData(ReportTimeRange currentPeriod,
-                                                            ReportTimeRange previousPeriod) {
+    private OverviewReportResponse.ProfitData getProfitData(CurrencyRates currentCurrencyRates,
+                                                            CurrencyRates periodCurrencyRates) {
         // Lợi nhuận hiện tại & trước đó
-        BigDecimal currentProfit = getProfit(currentPeriod);
-        BigDecimal previousProfit = getProfit(previousPeriod);
+        BigDecimal currentProfit = getProfit(currentCurrencyRates);
+        BigDecimal previousProfit = getProfit(periodCurrencyRates);
 
         // % thay đổi lợi nhuận
         BigDecimal profitChangePercent = ReportUtils.changePercent(currentProfit, previousProfit, percentScale);
@@ -175,8 +216,8 @@ public class OverviewReportServiceImpl implements OverviewReportService {
                 .build();
     }
 
-    private OverviewReportResponse.CostData getAdCostData(ReportTimeRange currentPeriod,
-                                                          ReportTimeRange previousPeriod) {
+    private OverviewReportResponse.CostData getAdCostData(CurrencyRates currentCurrencyRates,
+                                                          CurrencyRates periodCurrencyRates) {
         // TODO: code CostData
         return OverviewReportResponse.CostData.builder()
                 .cost(BigDecimal.ZERO)
@@ -184,12 +225,5 @@ public class OverviewReportServiceImpl implements OverviewReportService {
                 .adCostPerRevenue(BigDecimal.ZERO)
                 .adCostPerRevenueChangePercent(BigDecimal.ZERO)
                 .build();
-    }
-
-    public BigDecimal getOrderRevenue(List<OrderEntity> orders) {
-        return orders.stream()
-                .map(OrderEntity::getTotalPrice)
-                .filter(Objects::nonNull)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 }

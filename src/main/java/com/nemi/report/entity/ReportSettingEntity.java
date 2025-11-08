@@ -5,19 +5,19 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
+import lombok.experimental.SuperBuilder;
 
-import java.time.LocalDateTime;
-
+@EqualsAndHashCode(callSuper = true)
 @Entity
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
+@SuperBuilder
 @Table(name = "report_setting", schema = "system_manager")
-public class ReportSettingEntity {
+public class ReportSettingEntity extends BaseEntity {
     @Id
     @Column(name = "user_id")
     private String userId;
@@ -33,10 +33,4 @@ public class ReportSettingEntity {
 
     @Column(name = "return_order_when")
     private String returnOrderWhen;
-
-    @Column(name = "updated_time")
-    private LocalDateTime updatedTime;
-
-    @Column(name = "updated_by")
-    private String updatedBy;
 }

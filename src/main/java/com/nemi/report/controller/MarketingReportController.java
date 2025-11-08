@@ -1,7 +1,7 @@
 package com.nemi.report.controller;
 
-import com.nemi.report.model.request.marketing.MarketingSummaryRequest;
-import com.nemi.report.model.response.marketing.MarketingSummaryResponse;
+import com.nemi.report.model.request.ReportSummaryRequest;
+import com.nemi.report.model.response.ReportSummaryResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -14,14 +14,14 @@ import jakarta.validation.Valid;
 public class MarketingReportController {
 
     @PostMapping("/summary")
-    public ResponseEntity<MarketingSummaryResponse> getMarketingSummary(
-            @Valid @RequestBody MarketingSummaryRequest request) {
+    public ResponseEntity<ReportSummaryResponse> getMarketingSummary(
+            @Valid @RequestBody ReportSummaryRequest request) {
 
         // TODO: Implement service call
         // MarketingSummaryResponse response = marketingSummaryService.getMarketingSummary(request);
 
         // Temporary mock response
-        MarketingSummaryResponse response = new MarketingSummaryResponse();
+        ReportSummaryResponse response = new ReportSummaryResponse();
 
         return ResponseEntity.ok(response);
     }
