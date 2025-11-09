@@ -1,0 +1,153 @@
+nemi:
+  product:
+    default-columns:
+      - product_name
+      - product_id
+      - revenue
+      - orders
+      - ad_cost
+      - ad_cost_to_revenue
+      - ad_cost_per_order
+      - confirmed_orders
+      - returned_orders
+      - successful_orders
+      - profit
+      - status
+
+    system-views:
+      - code: performance
+        title-en: "Product Performance"
+        title-vi: "Hiệu quả sản phẩm"
+        columns:
+          - product_name
+          - revenue
+          - orders
+          - ad_cost
+          - ad_cost_to_revenue
+          - ad_cost_per_order
+          - confirmed_orders
+          - returned_orders
+          - successful_orders
+          - profit
+    column-categories:
+      - category-name-en: "Product-general"
+        category-name-vi: "Sản phẩm"
+        columns:
+          - code: product_name
+            titleEn: "Product"
+            titleVi: "Sản phẩm"
+            type: TEXT
+            hasFilter: true
+            source: MAIN
+            summary-type: NONE
+            mapping: name
+
+          - code: product_id
+            titleEn: "Product ID"
+            titleVi: "Mã sản phẩm"
+            type: TEXT
+            source: MAIN
+            summary-type: NONE
+            hasFilter: true
+            mapping: product_id
+
+          - code: status
+            titleEn: "Status"
+            titleVi: "Trạng thái"
+            type: TEXT
+            mapping: status
+            source: MAIN
+            summary-type: NONE
+            hasFilter: true
+
+
+          - code: revenue
+            titleEn: "Revenue"
+            titleVi: "Doanh số"
+            type: DECIMAL
+            mapping: revenue
+            formula: SUM(i.revenue)
+            avg-formula: SUM(data.revenue)
+            summary-type: SUM
+            hasFilter: true
+
+          - code: ad_cost
+            titleEn: "Ad Cost"
+            titleVi: "CPQC"
+            type: DECIMAL
+            mapping: ad_cost
+            formula: SUM(i.ad_cost)
+            avg-formula: SUM(data.ad_cost)
+            summary-type: SUM
+            hasFilter: true
+
+          - code: ad_cost_to_revenue
+            titleEn: "Ad Cost / Revenue"
+            titleVi: "CPQC/Doanh số"
+            type: DECIMAL
+            formula: (SUM(i.ad_cost) / NULLIF(SUM(i.revenue), 0))
+            avg-formula: (SUM(data.ad_cost) / NULLIF(SUM(data.revenue), 0))
+            required-for-avg: [ ad_cost, revenue ]
+            summary-type: AVG
+            hasFilter: true
+
+          - code: ad_cost_per_order
+            titleEn: "Ad Cost / Order"
+            titleVi: "CPQC/Đơn hàng"
+            type: DECIMAL
+            formula: (SUM(i.ad_cost) / NULLIF(SUM(i.orders), 0))
+            avg-formula: (SUM(data.ad_cost) / NULLIF(SUM(data.orders), 0))
+            required-for-avg: [ ad_cost, orders ]
+            summary-type: AVG
+            hasFilter: true
+
+          - code: profit
+            titleEn: "Profit"
+            titleVi: "Lợi nhuận"
+            type: DECIMAL
+            formula: (SUM(i.revenue) - SUM(i.ad_cost))
+            avg-formula: (SUM(data.revenue) - SUM(data.ad_cost))
+            required-for-avg: [ revenue, ad_cost ]
+            summary-type: SUM
+            hasFilter: true
+
+          - code: total_orders
+            titleEn: "Total Orders"
+            titleVi: "Tổng đơn hàng"
+            type: INTEGER
+            formula: "COUNT(DISTINCT oi.order_id)"
+            source: INSIGHT
+            summary-type: SUM
+            mapping: total_orders
+            hasFilter: true
+
+          - code: confirmed_orders
+            titleEn: "Confirmed Orders"
+            titleVi: "Đơn chốt"
+            type: INTEGER
+            formula: "COUNT(DISTINCT oi.order_id) FILTER (WHERE o.status IN ('NEW', 'PROCESSING', 'READY_TO_SHIP', 'SHIPPING'))"
+            summary-type: SUM
+            source: INSIGHT
+            mapping: confirmed_orders
+            hasFilter: true
+
+          - code: successful_orders
+            titleEn: "Successful Orders"
+            titleVi: "Đơn thành công"
+            type: INTEGER
+            formula: "(COUNT(DISTINCT oi.order_id) FILTER (WHERE o.status IN ('DELIVERED')) - COUNT(DISTINCT oi.order_id) FILTER (WHERE o.status = 'DELIVERED'))"
+            summary-type: SUM
+            source: INSIGHT
+            mapping: successful_orders
+            hasFilter: true
+
+          - code: cancelled_orders
+            titleEn: "Cancelled Orders"
+            titleVi: "Đơn hủy"
+            type: INTEGER
+            formula: "COUNT(DISTINCT oi.order_id) FILTER (WHERE o.status IN ('CANCELLED', 'FAILED', 'RETURNED'))"
+            summary-type: SUM
+            source: INSIGHT
+            mapping: cancelled_orders
+            hasFilter: true
+
