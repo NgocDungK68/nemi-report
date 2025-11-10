@@ -88,11 +88,9 @@ public class ProductSumaryServiceImpl implements ProductSumaryService {
 
         ProductSummaryResponse response = getFromResultSQL(data, viewColumns, start, end, countData.getTotalElements(), countData.getTotalPages());
         return response;
-
-
     }
 
-    private ProductSummaryResponse getFromResultSQL(
+    public ProductSummaryResponse getFromResultSQL(
             List<Map<String, Object>> rows,
             Set<ColumnConfig> columns,
             LocalDate start,

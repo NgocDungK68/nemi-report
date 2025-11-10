@@ -7,6 +7,7 @@ import com.nemi.report.model.response.product.ProductChartResponse;
 import com.nemi.report.model.response.product.ProductDailyResponse;
 import com.nemi.report.model.response.product.ProductSummaryResponse;
 import com.nemi.report.model.response.product.ProductsChartResponse;
+import com.nemi.report.service.ProductChartService;
 import com.nemi.report.service.ProductSumaryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -21,6 +22,8 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class ProductReportController {
     private final ProductSumaryService productSumaryService;
+    private final ProductChartService productChartService;
+
     @PostMapping("/summary")
     public ResponseEntity<ProductSummaryResponse> getProductSummary(@RequestBody ProductSummaryRequest request) {
         // TODO: Implement service call
@@ -46,11 +49,7 @@ public class ProductReportController {
 
     @PostMapping("/products-chart")
     public ResponseEntity<ProductsChartResponse> getProductsChart(@RequestBody ReportChartRequest request) {
-        // TODO: Implement service call
-        // ProductsChartResponse response = productChartService.getProductsChart(request);
-
-        // Mock
-        ProductsChartResponse response = new ProductsChartResponse();
+         ProductsChartResponse response = productChartService.getProductsChart(request);
         return ResponseEntity.ok(response);
     }
 
