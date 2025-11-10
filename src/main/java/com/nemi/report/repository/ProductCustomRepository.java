@@ -36,6 +36,8 @@ public class ProductCustomRepository {
 
     private static final String BASE_WHERE_CLAUSE = "where p.created_by = :createdBy and p.created_at <= :endDate and p.created_at >= :startDate";
 
+    private static final String PRODUCT_WHERE_CLAUSE = "where p.created_by = :createdBy and p.created_at <= :endDate and p.created_at >= :startDate and p.product_id = :productId";
+
     private String buildFromClause(List<ProductSource> joinSources) {
         StringBuilder sql = new StringBuilder("FROM product_manager.products p ");
 
@@ -63,10 +65,10 @@ public class ProductCustomRepository {
 
 
     @SuppressWarnings({"unchecked"}) // viewcolun
-    public List<Map<String, Object>> search(Set<ColumnConfig> columns, Set<QueryParameter> queryParameters, Set<OrderParameter> orderParameters, LocalDate startDate, LocalDate endDate, PageRequest pageRequest, String createdBy) {
+    public List<Map<String, Object>> search(Set<ColumnConfig> columns, Set<QueryParameter> queryParameters, Set<OrderParameter> orderParameters, LocalDate startDate, LocalDate endDate, PageRequest pageRequest, String createdBy,String producId) {
         try {
             StringBuilder sql = new StringBuilder();
-            sql.append("select * from (select p.product_id , p.name, p.status");
+            sql.append("select * from (select p.product_id , p.name, p.status,p.created_at");
 
 //            if (adsTab.equals(AdsTab.AD_ACCOUNT)) {
 //                sql.append(", a.account_status as status_account, a.currency as currency_default ");
@@ -76,7 +78,7 @@ public class ProductCustomRepository {
 //                sql.append(", p.status, MAX(ac.account_status) as status_account, MAX(ac.currency) as currency_default, a.campaign ->> 'objective' as objective_default ");
 //            }
 
-            buildSelectAndFromAndWhereClause(sql, columns, queryParameters);
+            buildSelectAndFromAndWhereClause(sql, columns, queryParameters,producId);
 
             sql.append(" order by ");
 
@@ -90,7 +92,7 @@ public class ProductCustomRepository {
                 sql.append(orderByClause);
             }
 
-            Query query = buildQuery(sql, createdBy, startDate, endDate);
+            Query query = buildQuery(sql, createdBy, startDate, endDate,producId);
 
             if (ObjectUtils.isNotEmpty(pageRequest)) {
                 query.setFirstResult(pageRequest.getPageNumber() * pageRequest.getPageSize());
@@ -119,18 +121,18 @@ public class ProductCustomRepository {
                 });
     }
 
-    public PageCountData count(Set<QueryParameter> queryParameters, LocalDate startDate, LocalDate endDate, PageRequest pageRequest, String createdBy) {
+    public PageCountData count(Set<QueryParameter> queryParameters, LocalDate startDate, LocalDate endDate, PageRequest pageRequest, String createdBy,String productId) {
         try {
             StringBuilder sql = new StringBuilder();
             sql.append("select count(1) from (select * from (select p.product_id ");
 
             // append from and where clause
             LinkedHashSet<ColumnConfig> selectColumns = new LinkedHashSet<>();
-            buildSelectAndFromAndWhereClause(sql, selectColumns, queryParameters);
+            buildSelectAndFromAndWhereClause(sql, selectColumns, queryParameters,productId);
 
             sql.append(" ) as count");
 
-            Query query = buildQuery(sql, createdBy, startDate, endDate);
+            Query query = buildQuery(sql, createdBy, startDate, endDate,productId);
 
             log.debug("SQL search: {}", sql);
 
@@ -147,15 +149,19 @@ public class ProductCustomRepository {
     }
 
 
-    private Query buildQuery(StringBuilder sqlBuilder, String createdBy, LocalDate startDate, LocalDate endDate) {
+    private Query buildQuery(StringBuilder sqlBuilder, String createdBy, LocalDate startDate, LocalDate endDate,String productId) {
         Query query = em.createNativeQuery(sqlBuilder.toString());
         query.setParameter("createdBy", createdBy);
         query.setParameter("startDate", startDate);
         query.setParameter("endDate", endDate);
+        if(StringUtils.isNotEmpty(productId))
+        {
+            query.setParameter("productId", productId);
+        }
         return query;
     }
 
-    private void buildSelectAndFromAndWhereClause(StringBuilder sql, Set<ColumnConfig> columns, Set<QueryParameter> queryParameters) {
+    private void buildSelectAndFromAndWhereClause(StringBuilder sql, Set<ColumnConfig> columns, Set<QueryParameter> queryParameters,String productId) {
         Set<ColumnConfig> selectColumns = new LinkedHashSet<>(columns);
         List<QueryParameter> queryInMains = new ArrayList<>();
         List<QueryParameter> queryInInsights = new ArrayList<>();
@@ -172,7 +178,7 @@ public class ProductCustomRepository {
         }
 
         // For select column here
-        buildSelectAndFromClause(sql, selectColumns);
+        buildSelectAndFromClause(sql, selectColumns,productId);
 
         // append main table where clause
         queryInMains.forEach(qM -> {
@@ -187,7 +193,7 @@ public class ProductCustomRepository {
             buildWhereClause(sql, queryInInsights);
     }
 
-    private void buildSelectAndFromClause(StringBuilder sql, Set<ColumnConfig> summaryColumns) {
+    private void buildSelectAndFromClause(StringBuilder sql, Set<ColumnConfig> summaryColumns,String productId) {
         summaryColumns.forEach(column -> {
             if (StringUtils.isNoneEmpty(column.getFormula())) {
                 sql.append(String.format(", %s as \"%s\"", column.getFormula(), column.getCode()));
@@ -200,7 +206,12 @@ public class ProductCustomRepository {
         sql.append(buildFromClause(List.of(ProductSource.ORDER_ITEM, ProductSource.ORDER)));
         sql.append("\n");
         // For other tabs, use the base where clause
-        sql.append(BASE_WHERE_CLAUSE);
+        if(StringUtils.isEmpty(productId))
+        {
+            sql.append(BASE_WHERE_CLAUSE);
+        } else {
+            sql.append(PRODUCT_WHERE_CLAUSE);
+        }
 
     }
 

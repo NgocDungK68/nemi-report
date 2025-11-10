@@ -30,20 +30,20 @@ public class ProductReportController {
         // ProductSummaryResponse response = productSummaryService.getProductSummary(request);
 
         // Mock
-        ProductSummaryResponse response = productSumaryService.getProductSumary(request);
+        ProductSummaryResponse response = productSumaryService.getProductSumary(request,null);
         return ResponseEntity.ok(response);
     }
 
     @PostMapping("/{productId}")
-    public ResponseEntity<ProductDailyResponse> getProductSummary(
+    public ResponseEntity<ProductSummaryResponse> getProductSummary(
             @PathVariable(name = "productId") String productId,
-            @RequestBody ReportSummaryRequest request
+            @RequestBody ProductSummaryRequest request
     ) {
         // TODO: Implement service call
         // ProductDailyResponse response = productSummaryService.getProductDaily(productId, request);
 
         // Mock
-        ProductDailyResponse response = new ProductDailyResponse();
+        ProductSummaryResponse response = productSumaryService.getProductSumary(request, productId);
         return ResponseEntity.ok(response);
     }
 
