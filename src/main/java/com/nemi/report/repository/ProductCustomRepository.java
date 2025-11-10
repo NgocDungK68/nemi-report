@@ -43,6 +43,8 @@ public class ProductCustomRepository {
                 sql.append("""
                         LEFT JOIN product_manager.order_item oi 
                             ON oi.product_name = p.name
+                                AND oi.pos_id = p.pos_id
+                                AND oi.product_id = p.product_id
                         """);
             } else if (source.equals(ProductSource.ORDER)) {
                 sql.append("""
@@ -170,7 +172,7 @@ public class ProductCustomRepository {
             sql.append(QueryResolver.buildSqlCondition(qM));
         });
 
-        sql.append(" GROUP BY p.product_id, p.name, p.status) s ");
+        sql.append(" GROUP BY p.product_id, p.name, p.status,p.pos_id) s ");
 
         // append where clause in insight table
         if (!queryInInsights.isEmpty())
