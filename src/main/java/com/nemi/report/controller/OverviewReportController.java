@@ -1,5 +1,6 @@
 package com.nemi.report.controller;
 
+import com.nemi.annotation.RequirePermission;
 import com.nemi.report.constant.CompareWithType;
 import com.nemi.report.constant.Currency;
 import com.nemi.report.constant.OverviewDataType;
@@ -43,6 +44,7 @@ public class OverviewReportController {
     private final ConfigService configService;
 
     @GetMapping("/revenue")
+    @RequirePermission("REPORTING.OVERVIEW_REPORT.VIEW")
     public ResponseEntity<OverviewReportResponse> getOverviewReport(
             @RequestParam("from") @DateTimeFormat(pattern = "dd/MM/yyyy") LocalDate from,
             @RequestParam("to") @DateTimeFormat(pattern = "dd/MM/yyyy") LocalDate to,
@@ -59,6 +61,7 @@ public class OverviewReportController {
         return ResponseEntity.ok(response);
     }
 
+    @RequirePermission("REPORTING.OVERVIEW_REPORT.VIEW")
     @GetMapping("/compare-chart")
     public ResponseEntity<CompareChartResponse> getCompareChart(
             @RequestParam("from") @DateTimeFormat(pattern = "dd/MM/yyyy") LocalDate from,
@@ -78,6 +81,7 @@ public class OverviewReportController {
         return ResponseEntity.ok(response);
     }
 
+    @RequirePermission("REPORTING.OVERVIEW_REPORT.VIEW")
     @GetMapping("/business-today")
     public ResponseEntity<BusinessTodayResponse> getBusinessToday(
             @RequestParam("currency") Currency currency) {
@@ -89,6 +93,7 @@ public class OverviewReportController {
         return ResponseEntity.ok(response);
     }
 
+    @RequirePermission("REPORTING.OVERVIEW_REPORT.VIEW")
     @GetMapping("/monthly-target")
     public ResponseEntity<MonthlyTargetResponse> getMonthlyTarget(
             @RequestParam("currency") Currency currency) {
@@ -100,6 +105,7 @@ public class OverviewReportController {
         return ResponseEntity.ok(response);
     }
 
+    @RequirePermission("REPORTING.OVERVIEW_REPORT.EDIT")
     @PutMapping("/monthly-target")
     public ResponseEntity<String> updateMonthlyTarget(
             @Valid @RequestBody UpdateMonthlyTargetRequest request) {
@@ -108,6 +114,7 @@ public class OverviewReportController {
         return ResponseEntity.ok("200");
     }
 
+    @RequirePermission("REPORTING.OVERVIEW_REPORT.VIEW")
     @GetMapping("/config")
     public ResponseEntity<ConfigResponse> getConfig() {
 
@@ -115,6 +122,7 @@ public class OverviewReportController {
         return ResponseEntity.ok(response);
     }
 
+    @RequirePermission("REPORTING.OVERVIEW_REPORT.EDIT")
     @PutMapping("/config")
     public ResponseEntity<ConfigResponse> updateConfig(
             @RequestBody ConfigRequest request) {

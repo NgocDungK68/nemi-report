@@ -1,5 +1,6 @@
 package com.nemi.report.controller;
 
+import com.nemi.annotation.RequirePermission;
 import com.nemi.report.model.request.ReportSummaryRequest;
 import com.nemi.report.model.request.ReportChartRequest;
 import com.nemi.report.model.request.product.ProductSummaryRequest;
@@ -20,7 +21,10 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/client-api/v1/report/product")
 @RequiredArgsConstructor
 public class ProductReportController {
+
     private final ProductSumaryService productSumaryService;
+
+    @RequirePermission("REPORTING.PRODUCT_REPORT.VIEW")
     @PostMapping("/summary")
     public ResponseEntity<ProductSummaryResponse> getProductSummary(@RequestBody ProductSummaryRequest request) {
         // TODO: Implement service call
@@ -31,6 +35,7 @@ public class ProductReportController {
         return ResponseEntity.ok(response);
     }
 
+    @RequirePermission("REPORTING.PRODUCT_REPORT.VIEW")
     @PostMapping("/{productId}")
     public ResponseEntity<ProductSummaryResponse> getProductSummary(
             @PathVariable(name = "productId") String productId,
@@ -44,6 +49,7 @@ public class ProductReportController {
         return ResponseEntity.ok(response);
     }
 
+    @RequirePermission("REPORTING.PRODUCT_REPORT.VIEW")
     @PostMapping("/products-chart")
     public ResponseEntity<ProductsChartResponse> getProductsChart(@RequestBody ReportChartRequest request) {
         // TODO: Implement service call
@@ -54,6 +60,7 @@ public class ProductReportController {
         return ResponseEntity.ok(response);
     }
 
+    @RequirePermission("REPORTING.PRODUCT_REPORT.VIEW")
     @PostMapping("/product-chart/{productId}")
     public ResponseEntity<ProductChartResponse> getProductChart(
             @PathVariable(name = "productId") String productId,

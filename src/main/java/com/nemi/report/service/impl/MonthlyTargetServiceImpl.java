@@ -89,7 +89,8 @@ public class MonthlyTargetServiceImpl implements MonthlyTargetService {
 
             // Thông tin doanh số và số lượng orders trong tháng tính đến thời điểm hiện tại
             LocalDateTime firstDayOfMonth = LocalDate.now().withDayOfMonth(1).atStartOfDay();
-            List<OrderEntity> ordersThisMonth = orderRepository.findByStatusInAndUpdatedAtBetween(
+            List<OrderEntity> ordersThisMonth = orderRepository.findByDepartmentIdAndStatusInAndUpdatedAtBetween(
+                    claimUtil.getDepartmentId(),
                     OrderStatus.getTotalOrdersStatus(),
                     firstDayOfMonth,
                     LocalDate.now().atTime(LocalTime.MAX)

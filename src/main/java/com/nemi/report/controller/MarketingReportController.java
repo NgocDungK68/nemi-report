@@ -1,5 +1,6 @@
 package com.nemi.report.controller;
 
+import com.nemi.annotation.RequirePermission;
 import com.nemi.report.model.request.ReportSummaryRequest;
 import com.nemi.report.model.response.ReportSummaryResponse;
 import lombok.RequiredArgsConstructor;
@@ -13,6 +14,7 @@ import jakarta.validation.Valid;
 @RequiredArgsConstructor
 public class MarketingReportController {
 
+    @RequirePermission("REPORTING.MARKETING_REPORT.VIEW")
     @PostMapping("/summary")
     public ResponseEntity<ReportSummaryResponse> getMarketingSummary(
             @Valid @RequestBody ReportSummaryRequest request) {

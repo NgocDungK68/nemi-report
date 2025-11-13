@@ -137,7 +137,8 @@ public class BusinessTodayServiceImpl implements BusinessTodayService {
         LocalDateTime from = startOfDay.plusHours(startHour);
         LocalDateTime to = startOfDay.plusHours(endHour);
 
-        List<OrderEntity> orderEntities = orderRepository.findByStatusInAndUpdatedAtBetween(OrderStatus.getTotalOrdersStatus(), from, to);
+
+        List<OrderEntity> orderEntities = orderRepository.findByDepartmentIdAndStatusInAndUpdatedAtBetween(claimUtil.getDepartmentId(), OrderStatus.getTotalOrdersStatus(), from, to);
         BigDecimal orderRevenue = overviewReportService.getOrderRevenue(orderEntities);
         if (ObjectUtils.isNotEmpty(currencyRates.getCurrencyRate())) {
             orderRevenue = orderRevenue.multiply(currencyRates.getCurrencyRate().get(dateToday));
