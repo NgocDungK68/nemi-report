@@ -1,8 +1,8 @@
-package com.nemi.report.model.request.overview;
+package com.nemi.report.model.response.overview;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.nemi.report.constant.ConfirmOrderWhen;
 import com.nemi.report.constant.ReturnOrderWhen;
-import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -12,11 +12,11 @@ import lombok.NoArgsConstructor;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class ConfigRequest {
+public class ReportSettingResponse {
 
-    @NotNull
+    @JsonProperty("confirmOrderWhen")
     private ConfirmOrderWhen confirmOrderWhen;
 
-    @NotNull
+    @JsonProperty("returnOrderWhen")
     private ReturnOrderWhen returnOrderWhen;
 }

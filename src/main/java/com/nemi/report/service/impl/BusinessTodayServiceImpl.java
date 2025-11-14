@@ -10,7 +10,7 @@ import com.nemi.report.exception.TechnicalAlertCode;
 import com.nemi.report.model.request.CurrencyRates;
 import com.nemi.report.model.request.overview.BusinessTodayRequest;
 import com.nemi.report.model.response.overview.BusinessTodayResponse;
-import com.nemi.report.model.response.overview.ConfigResponse;
+import com.nemi.report.model.response.overview.ReportSettingResponse;
 import com.nemi.report.model.response.overview.RevenueSummary;
 import com.nemi.report.repository.OrderRepository;
 import com.nemi.report.service.BusinessTodayService;
@@ -43,7 +43,7 @@ public class BusinessTodayServiceImpl implements BusinessTodayService {
         log.info("[BusinessTodayServiceImpl.getBusinessToday] Start generating today's business report with currency: {}", request.getCurrency());
 
         try {
-            ConfigResponse config = configService.getConfig();
+            ReportSettingResponse config = configService.getConfig();
             CurrencyRates currencyRateToday = currencyRateService.getCurrencyRateToday(
                     claimUtil.getCompanyId(),
                     request.getCurrency()

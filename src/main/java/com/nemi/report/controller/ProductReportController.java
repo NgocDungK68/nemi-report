@@ -9,6 +9,7 @@ import com.nemi.report.model.response.product.ProductDailyResponse;
 import com.nemi.report.model.response.product.ProductSummaryResponse;
 import com.nemi.report.model.response.product.ProductsChartResponse;
 import com.nemi.report.service.ProductSumaryService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -24,9 +25,9 @@ public class ProductReportController {
 
     private final ProductSumaryService productSumaryService;
 
-    @RequirePermission("REPORTING.PRODUCT_REPORT.VIEW")
+//    @RequirePermission("REPORTING.PRODUCT_REPORT.VIEW")
     @PostMapping("/summary")
-    public ResponseEntity<ProductSummaryResponse> getProductSummary(@RequestBody ProductSummaryRequest request) {
+    public ResponseEntity<ProductSummaryResponse> getProductSummary(@Valid @RequestBody ProductSummaryRequest request) {
         // TODO: Implement service call
         // ProductSummaryResponse response = productSummaryService.getProductSummary(request);
 

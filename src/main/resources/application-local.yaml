@@ -27,6 +27,15 @@ spring:
         - classpath:product-column-config.yml
         - classpath:report-column-config.yml
 
+nemi:
+  feign:
+    user-manager:
+      base-url: http://localhost:5200
+    ads-manager:
+      base-url: http://localhost:5179
+    system-manager:
+      base-url: http://localhost:5203
+
 server:
   port: 5204
   error:

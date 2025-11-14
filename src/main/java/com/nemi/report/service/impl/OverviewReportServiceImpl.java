@@ -9,7 +9,7 @@ import com.nemi.report.entity.OrderEntity;
 import com.nemi.report.exception.TechnicalAlertCode;
 import com.nemi.report.model.request.CurrencyRates;
 import com.nemi.report.model.request.overview.OverviewReportRequest;
-import com.nemi.report.model.response.overview.ConfigResponse;
+import com.nemi.report.model.response.overview.ReportSettingResponse;
 import com.nemi.report.model.response.overview.OverviewReportResponse;
 import com.nemi.report.model.response.overview.RevenueSummary;
 import com.nemi.report.repository.OrderRepository;
@@ -54,7 +54,7 @@ public class OverviewReportServiceImpl implements OverviewReportService {
                 request.getFrom(), request.getTo(), request.getCompareWith(), request.getCurrency());
 
         ValidationUtils.validateTimeRange(request.getFrom(), request.getTo());
-        ConfigResponse config = configService.getConfig();
+        ReportSettingResponse config = configService.getConfig();
         Currency currency = request.getCurrency();
 
         List<String> totalOrderStatus = OrderStatus.getTotalOrdersStatus();

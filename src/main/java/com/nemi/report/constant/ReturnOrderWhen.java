@@ -8,8 +8,8 @@ import java.util.List;
 @Getter
 @AllArgsConstructor
 public enum ReturnOrderWhen {
-    RETURN("return"),
-    RETURNED("returned");
+    RETURNING("RETURNING"),
+    RETURNED("RETURNED");
 
     private final String code;
 
@@ -24,9 +24,8 @@ public enum ReturnOrderWhen {
 
     public List<String> getOrderStatus() {
         return switch (this) {
-            case RETURN -> List.of(
-                    OrderStatus.FAILED.getCode(),
-                    OrderStatus.CANCELLED.getCode()
+            case RETURNING -> List.of(
+                    OrderStatus.RETURNED.getCode()
             );
             case RETURNED -> List.of(OrderStatus.RETURNED.getCode());
         };

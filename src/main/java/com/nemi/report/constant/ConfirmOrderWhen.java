@@ -8,10 +8,10 @@ import java.util.List;
 @Getter
 @AllArgsConstructor
 public enum ConfirmOrderWhen {
-    UPDATE_STATUS_TO_NEW("update_status_to_new"),
-    UPDATE_STATUS_TO_CONFIRM("update_status_to_confirm"),
-    MOVE_TO_TRANSPORTER("move_to_transporter"),
-    RECONCILIATED("reconciliated");
+    UPDATE_STATUS_TO_NEW("UPDATE_STATUS_TO_NEW"),
+    UPDATE_STATUS_TO_CONFIRMED("UPDATE_STATUS_TO_CONFIRMED"),
+    MOVE_TO_TRANSPORTER("MOVE_TO_TRANSPORTER"),
+    RECONCILED("RECONCILED");
 
     private final String code;
 
@@ -26,16 +26,26 @@ public enum ConfirmOrderWhen {
 
     public List<String> getOrderStatus() {
         return switch (this) {
-            case UPDATE_STATUS_TO_NEW -> List.of(OrderStatus.NEW.getCode());
-            case UPDATE_STATUS_TO_CONFIRM -> List.of(
+            case UPDATE_STATUS_TO_NEW -> List.of(OrderStatus.NEW.getCode(),
+                    OrderStatus.NEW.getCode(),
                     OrderStatus.PROCESSING.getCode(),
-                    OrderStatus.READY_TO_SHIP.getCode()
+                    OrderStatus.READY_TO_SHIP.getCode(),
+                    OrderStatus.SHIPPING.getCode(),
+                    OrderStatus.DELIVERED.getCode(),
+                    OrderStatus.RETURNED.getCode()
+                    );
+            case UPDATE_STATUS_TO_CONFIRMED -> List.of(
+                    OrderStatus.PROCESSING.getCode(),
+                    OrderStatus.READY_TO_SHIP.getCode(),
+                    OrderStatus.SHIPPING.getCode(),
+                    OrderStatus.DELIVERED.getCode(),
+                    OrderStatus.RETURNED.getCode()
             );
             case MOVE_TO_TRANSPORTER -> List.of(
                     OrderStatus.SHIPPING.getCode(),
                     OrderStatus.DELIVERED.getCode()
             );
-            case RECONCILIATED -> List.of(OrderStatus.DELIVERED.getCode());
+            case RECONCILED -> List.of(OrderStatus.DELIVERED.getCode());
         };
     }
 }

@@ -6,8 +6,8 @@ import com.nemi.report.constant.ConfirmOrderWhen;
 import com.nemi.report.constant.ReturnOrderWhen;
 import com.nemi.report.entity.ReportSettingEntity;
 import com.nemi.report.exception.TechnicalAlertCode;
-import com.nemi.report.model.request.overview.ConfigRequest;
-import com.nemi.report.model.response.overview.ConfigResponse;
+import com.nemi.report.model.request.overview.UpdateReportSettingRequest;
+import com.nemi.report.model.response.overview.ReportSettingResponse;
 import com.nemi.report.repository.ReportSettingRepository;
 import com.nemi.report.service.ConfigService;
 import com.nemi.util.ClaimUtil;
@@ -26,50 +26,46 @@ public class ConfigServiceImpl implements ConfigService {
     private final ReportSettingRepository reportSettingRepository;
 
     @Override
-    public ConfigResponse getConfig() {
-        String userId = claimUtil.getUserId();
-        log.debug("[ConfigServiceImpl.getConfig] Fetching config for userId={}", userId);
-        return reportSettingRepository.findById(userId)
+    public ReportSettingResponse getConfig() {
+        String departmentId = claimUtil.getDepartmentId();
+        log.debug("[ConfigServiceImpl.getConfig] Fetching config for departmentId={}", departmentId);
+        return reportSettingRepository.findById(departmentId)
                 .map(entity -> {
                     log.debug("[ConfigServiceImpl.getConfig] Loaded config: confirmOrderWhen={}, returnOrderWhen={}",
                             entity.getConfirmOrderWhen(), entity.getReturnOrderWhen());
 
-                    return ConfigResponse.builder()
+                    return ReportSettingResponse.builder()
                             .confirmOrderWhen(ConfirmOrderWhen.fromCode(entity.getConfirmOrderWhen()))
                             .returnOrderWhen(ReturnOrderWhen.fromCode(entity.getReturnOrderWhen()))
                             .build();
                 })
-                .orElseGet(() -> {
-                    log.info("[ConfigServiceImpl.getConfig] No existing config found for userId={}, using defaults", userId);
-
-                    return ConfigResponse.builder()
-                            .confirmOrderWhen(ConfirmOrderWhen.UPDATE_STATUS_TO_NEW)
-                            .returnOrderWhen(ReturnOrderWhen.RETURNED)
-                            .build();
-                });
+                .orElseGet(() -> ReportSettingResponse.builder()
+                        .confirmOrderWhen(ConfirmOrderWhen.UPDATE_STATUS_TO_NEW)
+                        .returnOrderWhen(ReturnOrderWhen.RETURNED)
+                        .build());
     }
 
     @Override
-    public ConfigResponse updateConfig(ConfigRequest request) {
-        String userId = claimUtil.getUserId();
+    public ReportSettingResponse updateConfig(UpdateReportSettingRequest request) {
+        String username = claimUtil.getUserName();
+        String departmentId = claimUtil.getDepartmentId();
 
-        log.trace("[ConfigServiceImpl.updateConfig] Updating config for userId={}, Request payload: confirmOrderWhen={}, returnOrderWhen={}",
-                userId, request.getConfirmOrderWhen(), request.getReturnOrderWhen());
+        log.trace("[ConfigServiceImpl.updateConfig] Updating config for departmentId={}, Request payload: confirmOrderWhen={}, returnOrderWhen={}",
+                departmentId, request.getConfirmOrderWhen(), request.getReturnOrderWhen());
 
         try {
-            Optional<ReportSettingEntity> reportSettingEntity = reportSettingRepository.findById(claimUtil.getUserId());
+            Optional<ReportSettingEntity> reportSettingEntity = reportSettingRepository.findById(departmentId);
 
             ReportSettingEntity reportSetting;
             if (reportSettingEntity.isPresent()) {
                 reportSetting = reportSettingEntity.get();
                 reportSetting.setUpdatedAt(LocalDateTime.now());
-                reportSetting.setUpdatedBy(claimUtil.getUserName());
+                reportSetting.setUpdatedBy(username);
             } else {
                 reportSetting = ReportSettingEntity.builder()
-                        .userId(userId)
-                        .departmentId(claimUtil.getDepartmentId())
+                        .departmentId(departmentId)
                         .companyId(claimUtil.getCompanyId())
-                        .createdBy(claimUtil.getUserName())
+                        .createdBy(username)
                         .build();
             }
 
@@ -77,14 +73,14 @@ public class ConfigServiceImpl implements ConfigService {
             reportSetting.setReturnOrderWhen(request.getReturnOrderWhen().getCode());
             reportSettingRepository.save(reportSetting);
 
-            log.info("[ConfigServiceImpl.updateConfig] Config updated successfully for userId={}", userId);
+            log.info("[ConfigServiceImpl.updateConfig] Config updated successfully for departmentId={}", departmentId);
 
-            return ConfigResponse.builder()
+            return ReportSettingResponse.builder()
                     .confirmOrderWhen(request.getConfirmOrderWhen())
                     .returnOrderWhen(request.getReturnOrderWhen())
                     .build();
         } catch (Exception e) {
-            log.error("[ConfigServiceImpl.updateConfig] Failed to update config for userId={} - error={}", userId, e.getMessage(), e);
+            log.error("[ConfigServiceImpl.updateConfig] Failed to update config for departmentId={} - error={}", departmentId, e.getMessage(), e);
             throw new TechnicalException(AlertMessages.alert(TechnicalAlertCode.CONFIG_UPDATE_ERROR));
         }
     }

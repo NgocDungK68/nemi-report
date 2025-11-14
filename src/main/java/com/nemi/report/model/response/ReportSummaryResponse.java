@@ -9,11 +9,11 @@ import java.util.Map;
 @Data
 public class ReportSummaryResponse {
 
-    @JsonProperty("totalElements")
-    private Long totalElements;
-
-    @JsonProperty("totalPages")
-    private Integer totalPages;
+//    @JsonProperty("totalElements")
+//    private Long totalElements;
+//
+//    @JsonProperty("totalPages")
+//    private Integer totalPages;
 
     @JsonProperty("data")
     private List<DataItem> data;
