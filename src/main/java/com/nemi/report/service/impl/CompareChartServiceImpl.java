@@ -11,7 +11,7 @@ import com.nemi.report.exception.TechnicalAlertCode;
 import com.nemi.report.model.request.CurrencyRates;
 import com.nemi.report.model.request.overview.CompareChartRequest;
 import com.nemi.report.model.response.overview.CompareChartResponse;
-import com.nemi.report.model.response.overview.ConfigResponse;
+import com.nemi.report.model.response.overview.ReportSettingResponse;
 import com.nemi.report.service.CompareChartService;
 import com.nemi.report.service.ConfigService;
 import com.nemi.report.util.ReportUtils;
@@ -59,7 +59,7 @@ public class CompareChartServiceImpl implements CompareChartService {
                     request.getCurrency()
             );
 
-            ConfigResponse config = configService.getConfig();
+            ReportSettingResponse config = configService.getConfig();
             int changePercentScale = reportConfig.getScale().getPercent();
             int stepDays = reportConfig.getCompareChart().getStepDays();
             log.debug("[CompareChartServiceImpl.getCompareChart] Loaded config: {}, Steps days: {}", config, stepDays);
@@ -104,7 +104,7 @@ public class CompareChartServiceImpl implements CompareChartService {
         }
     }
 
-    private BigDecimal getValueByDataType(OverviewDataType dataType, ConfigResponse config, CurrencyRates currencyRates) {
+    private BigDecimal getValueByDataType(OverviewDataType dataType, ReportSettingResponse config, CurrencyRates currencyRates) {
         log.debug("[CompareChartServiceImpl.getValueByDataType] Getting {} value for date={}",
                 dataType, currencyRates.getFrom());
 

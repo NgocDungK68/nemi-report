@@ -5,5 +5,5 @@ import lombok.Getter;
 @Getter
 public enum ProductSource {
     MAIN, INSIGHT, VIEW_ONLY, ORDER,         // Bảng order
-    ORDER_ITEM,
+    ORDER_ITEM, ADS
     }

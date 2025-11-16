@@ -39,7 +39,7 @@ public class ProductCustomRepository {
     private static final String PRODUCT_WHERE_CLAUSE = "where p.created_by = :createdBy and p.created_at <= :endDate and p.created_at >= :startDate and p.product_id = :productId";
 
     private String buildFromClause(List<ProductSource> joinSources) {
-        StringBuilder sql = new StringBuilder("FROM product_manager.products p ");
+        StringBuilder sql = new StringBuilder(" FROM product_manager.products p ");
 
         for (ProductSource source : joinSources) {
             if (source.equals(ProductSource.ORDER_ITEM)) {
@@ -238,6 +238,7 @@ public class ProductCustomRepository {
             case VIEW_ONLY -> "i";
             case ORDER_ITEM -> "oi";
             case INSIGHT -> "i";
+            case ADS -> "ad";
         };
     }
 

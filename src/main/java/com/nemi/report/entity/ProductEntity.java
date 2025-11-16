@@ -2,9 +2,12 @@ package com.nemi.report.entity;
 
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.nemi.report.entity.key.OrderPosId;
+import com.nemi.report.entity.key.ProductPosId;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
+import jakarta.persistence.IdClass;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -19,11 +22,13 @@ import lombok.experimental.SuperBuilder;
 @Entity
 @SuperBuilder
 @Table(name = "products", schema = "product_manager")
+@IdClass(ProductPosId.class)
 public class ProductEntity extends BaseEntity {
     @Id
     @Column(name = "product_id")
     private String productId;
 
+    @Id
     @Column(name = "pos_id")
     private String posId;
 

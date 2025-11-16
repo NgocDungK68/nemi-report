@@ -13,11 +13,11 @@ import java.time.LocalDate;
 public class CompareChartRequest {
 
     @NotNull
-    @JsonFormat(pattern = "dd/MM/yyyy")
+    @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate from;
 
     @NotNull
-    @JsonFormat(pattern = "dd/MM/yyyy")
+    @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate to;
 
     private CompareWithType compareWith; // L7D, L1M, L2M, L3M, LY

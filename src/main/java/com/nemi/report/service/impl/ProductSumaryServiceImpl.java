@@ -21,6 +21,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
+import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -126,7 +127,15 @@ public class ProductSumaryServiceImpl implements ProductSumaryService {
                         if (value instanceof Number n) {
                             extraData.put(key, n);
                         } else if (matchColumn.getType().equals(ColumnDataType.TIMESTAMP)) {
-                            extraData.put(key, convertInstantToString((Instant) value, matchColumn));
+                            if (value instanceof Timestamp ts) {
+                                extraData.put(key, convertInstantToString(ts.toInstant(), matchColumn));
+
+                            } else if (value instanceof Instant i) {
+                                extraData.put(key, convertInstantToString(i, matchColumn));
+
+                            } else {
+                                extraData.put(key, null);
+                            }
                         } else {
                             extraData.put(key, value);
                         }

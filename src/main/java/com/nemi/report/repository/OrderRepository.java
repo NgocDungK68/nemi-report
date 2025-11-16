@@ -12,7 +12,8 @@ import java.util.List;
 public interface OrderRepository extends JpaRepository<OrderEntity, String> {
     // Lọc theo nhiều status + khoảng thời gian
 //    @Query("SELECT o FROM OrderEntity o WHERE o.status IN :statuses AND o.updatedAt BETWEEN :from AND :to")
-    List<OrderEntity> findByStatusInAndUpdatedAtBetween(@Param("statuses") List<String> statuses,
-                                                        @Param("from") LocalDateTime from,
-                                                        @Param("to") LocalDateTime to);
+    List<OrderEntity> findByDepartmentIdAndStatusInAndUpdatedAtBetween(@Param("departmentId") String departmentId,
+                                                                       @Param("statuses") List<String> statuses,
+                                                                       @Param("from") LocalDateTime from,
+                                                                       @Param("to") LocalDateTime to);
 }

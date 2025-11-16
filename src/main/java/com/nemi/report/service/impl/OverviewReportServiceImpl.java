@@ -9,7 +9,7 @@ import com.nemi.report.entity.OrderEntity;
 import com.nemi.report.exception.TechnicalAlertCode;
 import com.nemi.report.model.request.CurrencyRates;
 import com.nemi.report.model.request.overview.OverviewReportRequest;
-import com.nemi.report.model.response.overview.ConfigResponse;
+import com.nemi.report.model.response.overview.ReportSettingResponse;
 import com.nemi.report.model.response.overview.OverviewReportResponse;
 import com.nemi.report.model.response.overview.RevenueSummary;
 import com.nemi.report.repository.OrderRepository;
@@ -54,7 +54,7 @@ public class OverviewReportServiceImpl implements OverviewReportService {
                 request.getFrom(), request.getTo(), request.getCompareWith(), request.getCurrency());
 
         ValidationUtils.validateTimeRange(request.getFrom(), request.getTo());
-        ConfigResponse config = configService.getConfig();
+        ReportSettingResponse config = configService.getConfig();
         Currency currency = request.getCurrency();
 
         List<String> totalOrderStatus = OrderStatus.getTotalOrdersStatus();
@@ -102,7 +102,7 @@ public class OverviewReportServiceImpl implements OverviewReportService {
                 orderStatus, currencyRates.getFrom(), currencyRates.getTo());
 
         if (ObjectUtils.isEmpty(currencyRates.getCurrencyRate())) {
-            List<OrderEntity> orders = orderRepository.findByStatusInAndUpdatedAtBetween(orderStatus, currencyRates.getFrom(), currencyRates.getTo());
+            List<OrderEntity> orders = orderRepository.findByDepartmentIdAndStatusInAndUpdatedAtBetween(claimUtil.getDepartmentId(), orderStatus, currencyRates.getFrom(), currencyRates.getTo());
             log.debug("[OverviewReportServiceImpl.getOrderSummary] Found {} orders", orders.size());
 
             return RevenueSummary.builder()
@@ -124,7 +124,7 @@ public class OverviewReportServiceImpl implements OverviewReportService {
 
             LocalDateTime startOfDate = date.atStartOfDay();
             LocalDateTime endOfDate = date.atTime(LocalTime.MAX);
-            List<OrderEntity> orders = orderRepository.findByStatusInAndUpdatedAtBetween(orderStatus, startOfDate, endOfDate);
+            List<OrderEntity> orders = orderRepository.findByDepartmentIdAndStatusInAndUpdatedAtBetween(claimUtil.getDepartmentId(), orderStatus, startOfDate, endOfDate);
             BigDecimal orderRevenue = getOrderRevenue(orders).multiply(currencyRate);
 
             revenue = revenue.add(orderRevenue);
