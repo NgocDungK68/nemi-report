@@ -52,7 +52,7 @@ public class ProductChartServiceImpl implements ProductChartService {
 
         LocalDate start = request.getStartDate();
         LocalDate end = request.getEndDate();
-        List<Map<String, Object>> data = productCustomRepository.search(new LinkedHashSet<>(searchColumns), null, null, start, end, null, claimUtil.getUserName());
+        List<Map<String, Object>> data = productCustomRepository.search(new LinkedHashSet<>(searchColumns), null, null, start, end, null, claimUtil.getUserName(), null);
 
         ProductSummaryResponse summaryResponse = productSummaryService.getFromResultSQL(data, viewColumns, start, end, 0, 0);
 
@@ -85,9 +85,9 @@ public class ProductChartServiceImpl implements ProductChartService {
                 .name(dataItem.getProduct().getName())
                 .build();
 
-        BigDecimal value = (BigDecimal) dataItem.getExtraData().get(code);
+        BigDecimal value = toBigDecimal(dataItem.getExtraData().get(code));
         ProductsChartResponse.DataValue dataValue = ProductsChartResponse.DataValue.builder()
-                .value((BigDecimal) dataItem.getExtraData().get(code))
+                .value(value)
                 .percent(value.divide(summary.getValue(), RoundingMode.HALF_UP))
                 .build();
 
@@ -100,7 +100,7 @@ public class ProductChartServiceImpl implements ProductChartService {
     private ProductsChartResponse.Summary getSummary(ProductSummaryResponse summaryResponse, String code) {
         BigDecimal summaryValue = BigDecimal.ZERO;
         for (ProductSummaryResponse.DataItem dataItem : summaryResponse.getData()) {
-            summaryValue = summaryValue.add((BigDecimal) dataItem.getExtraData().get(code));
+            summaryValue = summaryValue.add(toBigDecimal(dataItem.getExtraData().get(code)));
 
             // TODO: summary.percent
         }
@@ -109,4 +109,39 @@ public class ProductChartServiceImpl implements ProductChartService {
                 .value(summaryValue)
                 .build();
     }
+
+    /**
+     * Chuyển Object sang BigDecimal an toàn.
+     * Hỗ trợ Long, Integer, Double, Float, BigDecimal, String.
+     * Trả về null nếu object là null hoặc không chuyển được.
+     */
+    private BigDecimal toBigDecimal(Object valueObj) {
+        if (valueObj == null) return null;
+
+        if (valueObj instanceof BigDecimal) {
+            return (BigDecimal) valueObj;
+        } else if (valueObj instanceof Long) {
+            return BigDecimal.valueOf((Long) valueObj);
+        } else if (valueObj instanceof Integer) {
+            return BigDecimal.valueOf((Integer) valueObj);
+        } else if (valueObj instanceof Double) {
+            return BigDecimal.valueOf((Double) valueObj);
+        } else if (valueObj instanceof Float) {
+            return BigDecimal.valueOf(((Float) valueObj).doubleValue());
+        } else if (valueObj instanceof String) {
+            try {
+                return new BigDecimal((String) valueObj);
+            } catch (NumberFormatException e) {
+                return null;
+            }
+        } else {
+            // các kiểu khác, thử dùng toString()
+            try {
+                return new BigDecimal(valueObj.toString());
+            } catch (NumberFormatException e) {
+                return null;
+            }
+        }
+    }
+
 }

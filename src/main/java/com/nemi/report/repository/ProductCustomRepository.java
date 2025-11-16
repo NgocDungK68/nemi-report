@@ -68,7 +68,7 @@ public class ProductCustomRepository {
     public List<Map<String, Object>> search(Set<ColumnConfig> columns, Set<QueryParameter> queryParameters, Set<OrderParameter> orderParameters, LocalDate startDate, LocalDate endDate, PageRequest pageRequest, String createdBy,String producId) {
         try {
             StringBuilder sql = new StringBuilder();
-            sql.append("select * from (select p.product_id , p.name, p.status,p.created_at");
+            sql.append("select * from (select p.product_id , p.name, p.status,p.created_at ");
 
 //            if (adsTab.equals(AdsTab.AD_ACCOUNT)) {
 //                sql.append(", a.account_status as status_account, a.currency as currency_default ");
