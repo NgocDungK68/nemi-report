@@ -18,6 +18,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -152,8 +153,8 @@ public class ProductCustomRepository {
     private Query buildQuery(StringBuilder sqlBuilder, String createdBy, LocalDate startDate, LocalDate endDate,String productId) {
         Query query = em.createNativeQuery(sqlBuilder.toString());
         query.setParameter("createdBy", createdBy);
-        query.setParameter("startDate", startDate);
-        query.setParameter("endDate", endDate);
+        query.setParameter("startDate", startDate.atStartOfDay());
+        query.setParameter("endDate", endDate.atTime(LocalTime.MAX));
         if(StringUtils.isNotEmpty(productId))
         {
             query.setParameter("productId", productId);

@@ -20,7 +20,7 @@ public class ProductReportController {
 
     private final ProductSumaryService productSumaryService;
 
-//    @RequirePermission("REPORTING.PRODUCT_REPORT.VIEW")
+    //    @RequirePermission("REPORTING.PRODUCT_REPORT.VIEW")
     private final ProductChartService productChartService;
 
     @PostMapping("/summary")
@@ -29,7 +29,7 @@ public class ProductReportController {
         // ProductSummaryResponse response = productSummaryService.getProductSummary(request);
 
         // Mock
-        ProductSummaryResponse response = productSumaryService.getProductSumary(request,null);
+        ProductSummaryResponse response = productSumaryService.getProductSumary(request, null);
         return ResponseEntity.ok(response);
     }
 
@@ -50,7 +50,7 @@ public class ProductReportController {
     @RequirePermission("REPORTING.PRODUCT_REPORT.VIEW")
     @PostMapping("/products-chart")
     public ResponseEntity<ProductsChartResponse> getProductsChart(@RequestBody ReportChartRequest request) {
-         ProductsChartResponse response = productChartService.getProductsChart(request);
+        ProductsChartResponse response = productChartService.getProductsChart(request);
         return ResponseEntity.ok(response);
     }
 
@@ -60,11 +60,7 @@ public class ProductReportController {
             @PathVariable(name = "productId") String productId,
             @RequestBody ReportChartRequest request
     ) {
-        // TODO: Implement service call
-        // ProductChartResponse response = productChartService.getProductChart(productId, request);
-
-        // Mock
-        ProductChartResponse response = new ProductChartResponse();
+        ProductChartResponse response = productChartService.getProductChartByProductId(productId, request);
         return ResponseEntity.ok(response);
     }
 }

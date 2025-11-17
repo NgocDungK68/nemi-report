@@ -15,16 +15,16 @@ public class ProductsChartResponse {
     private Integer totalElements;
 
     @JsonProperty("userData")
-    private List<UserData> userData;
+    private List<ProductData> productData;
 
     @JsonProperty("summary")
     private Summary summary;
 
     @Data
     @Builder
-    public static class UserData {
+    public static class ProductData {
         @JsonProperty("product")
-        private ProductData product;
+        private Product product;
 
         @JsonProperty("data")
         private DataValue data;
@@ -45,7 +45,7 @@ public class ProductsChartResponse {
 
     @Data
     @Builder
-    public static class ProductData {
+    public static class Product {
         @JsonProperty("id")
         private String id;
 

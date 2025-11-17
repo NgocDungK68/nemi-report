@@ -96,8 +96,8 @@ public class ProductSumaryServiceImpl implements ProductSumaryService {
             Set<ColumnConfig> columns,
             LocalDate start,
             LocalDate end,
-            long totalElements,
-            int totalPages
+            Long totalElements,
+            Integer totalPages
     ) {
         ProductSummaryResponse response = new ProductSummaryResponse();
         List<ProductSummaryResponse.DataItem> dataList = new ArrayList<>();
