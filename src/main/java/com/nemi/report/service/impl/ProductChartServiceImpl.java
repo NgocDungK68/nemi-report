@@ -135,7 +135,6 @@ public class ProductChartServiceImpl implements ProductChartService {
                 return null;
             }
         } else {
-            // các kiểu khác, thử dùng toString()
             try {
                 return new BigDecimal(valueObj.toString());
             } catch (NumberFormatException e) {
