@@ -11,12 +11,14 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.hibernate.query.NativeQuery;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -67,7 +69,7 @@ public class ProductCustomRepository {
     public List<Map<String, Object>> search(Set<ColumnConfig> columns, Set<QueryParameter> queryParameters, Set<OrderParameter> orderParameters, LocalDate startDate, LocalDate endDate, PageRequest pageRequest, String createdBy,String producId) {
         try {
             StringBuilder sql = new StringBuilder();
-            sql.append("select * from (select p.product_id , p.name, p.status,p.created_at");
+            sql.append("select * from (select p.product_id , p.name, p.status,p.created_at ");
 
 //            if (adsTab.equals(AdsTab.AD_ACCOUNT)) {
 //                sql.append(", a.account_status as status_account, a.currency as currency_default ");
@@ -82,7 +84,7 @@ public class ProductCustomRepository {
             sql.append(" order by ");
 
             // append order by clause
-            if (orderParameters.isEmpty()) {
+            if (ObjectUtils.isEmpty(orderParameters)) {
                 sql.append("s.created_at desc");
             } else {
                 String orderByClause = orderParameters.stream()
@@ -93,8 +95,10 @@ public class ProductCustomRepository {
 
             Query query = buildQuery(sql, createdBy, startDate, endDate,producId);
 
-            query.setFirstResult(pageRequest.getPageNumber() * pageRequest.getPageSize());
-            query.setMaxResults(pageRequest.getPageSize());
+            if (ObjectUtils.isNotEmpty(pageRequest)) {
+                query.setFirstResult(pageRequest.getPageNumber() * pageRequest.getPageSize());
+                query.setMaxResults(pageRequest.getPageSize());
+            }
             setResultMapping(query);
 
             log.debug("SQL search: {}", sql);
@@ -134,7 +138,10 @@ public class ProductCustomRepository {
             log.debug("SQL search: {}", sql);
 
             long count = ((Number) query.getSingleResult()).longValue();
-            int totalPages = (int) Math.ceil(count / (double) pageRequest.getPageSize());
+            int totalPages = 1;
+            if (ObjectUtils.isNotEmpty(pageRequest)) {
+                totalPages = (int) Math.ceil(count / (double) pageRequest.getPageSize());
+            }
             return new PageCountData(count, totalPages, null);
         } catch (Exception e) {
             log.error("Error in count", e);
@@ -146,8 +153,8 @@ public class ProductCustomRepository {
     private Query buildQuery(StringBuilder sqlBuilder, String createdBy, LocalDate startDate, LocalDate endDate,String productId) {
         Query query = em.createNativeQuery(sqlBuilder.toString());
         query.setParameter("createdBy", createdBy);
-        query.setParameter("startDate", startDate);
-        query.setParameter("endDate", endDate);
+        query.setParameter("startDate", startDate.atStartOfDay());
+        query.setParameter("endDate", endDate.atTime(LocalTime.MAX));
         if(StringUtils.isNotEmpty(productId))
         {
             query.setParameter("productId", productId);
@@ -159,15 +166,17 @@ public class ProductCustomRepository {
         Set<ColumnConfig> selectColumns = new LinkedHashSet<>(columns);
         List<QueryParameter> queryInMains = new ArrayList<>();
         List<QueryParameter> queryInInsights = new ArrayList<>();
-        queryParameters.forEach(qp -> {
-            ColumnConfig col = qp.getColumn();
-            if (col.getSource().equals(ProductSource.MAIN)) {
-                queryInMains.add(qp);
-            } else {
-                queryInInsights.add(qp);
-                selectColumns.add(col);
-            }
-        });
+        if (ObjectUtils.isNotEmpty(queryParameters)) {
+            queryParameters.forEach(qp -> {
+                ColumnConfig col = qp.getColumn();
+                if (col.getSource().equals(ProductSource.MAIN)) {
+                    queryInMains.add(qp);
+                } else {
+                    queryInInsights.add(qp);
+                    selectColumns.add(col);
+                }
+            });
+        }
 
         // For select column here
         buildSelectAndFromClause(sql, selectColumns,productId);

@@ -1,6 +1,7 @@
 package com.nemi.report.model.response.product;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.Builder;
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -8,17 +9,19 @@ import java.time.LocalDate;
 import java.util.List;
 
 @Data
+@Builder
 public class ProductsChartResponse {
     @JsonProperty("totalElements")
     private Integer totalElements;
 
-    @JsonProperty("productData")
+    @JsonProperty("userData")
     private List<ProductData> productData;
 
     @JsonProperty("summary")
     private Summary summary;
 
     @Data
+    @Builder
     public static class ProductData {
         @JsonProperty("product")
         private Product product;
@@ -31,6 +34,7 @@ public class ProductsChartResponse {
     }
 
     @Data
+    @Builder
     public static class Summary {
         @JsonProperty("value")
         private BigDecimal value;
@@ -40,6 +44,7 @@ public class ProductsChartResponse {
     }
 
     @Data
+    @Builder
     public static class Product {
         @JsonProperty("id")
         private String id;
@@ -49,6 +54,7 @@ public class ProductsChartResponse {
     }
 
     @Data
+    @Builder
     public static class DataValue {
         @JsonProperty("value")
         private BigDecimal value;
