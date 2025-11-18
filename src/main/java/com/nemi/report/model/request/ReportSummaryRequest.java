@@ -2,7 +2,9 @@ package com.nemi.report.model.request;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.nemi.constant.CurrencyCodeEnum;
+import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 import jakarta.validation.constraints.NotNull;
@@ -16,21 +18,24 @@ public class ReportSummaryRequest {
     private CurrencyCodeEnum currency; // VND/USD
 
     @NotNull
-    @JsonFormat(pattern = "dd/MM/yyyy")
+    @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate startDate;
 
     @NotNull
-    @JsonFormat(pattern = "dd/MM/yyyy")
+    @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate endDate;
 
     @NotNull
-    private Integer page;
-
-    @NotNull
-    private Integer size;
-
-    @NotNull
     @Min(0)
+    private Integer page = 0;
+
+    @NotNull
+    @Min(1)
+    @Max(100)
+    private Integer size = 10;
+
+    @NotNull
+    @Size(min = 1)
     private List<ColumnRequest> columns;
 
     private List<FilterRequest> filters;

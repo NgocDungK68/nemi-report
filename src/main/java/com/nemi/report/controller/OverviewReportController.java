@@ -1,17 +1,18 @@
 package com.nemi.report.controller;
 
+import com.nemi.annotation.RequirePermission;
 import com.nemi.report.constant.CompareWithType;
 import com.nemi.report.constant.Currency;
 import com.nemi.report.constant.OverviewDataType;
 import com.nemi.report.model.request.overview.BusinessTodayRequest;
 import com.nemi.report.model.request.overview.CompareChartRequest;
-import com.nemi.report.model.request.overview.ConfigRequest;
+import com.nemi.report.model.request.overview.UpdateReportSettingRequest;
 import com.nemi.report.model.request.overview.MonthlyTargetRequest;
 import com.nemi.report.model.request.overview.OverviewReportRequest;
 import com.nemi.report.model.request.overview.UpdateMonthlyTargetRequest;
 import com.nemi.report.model.response.overview.BusinessTodayResponse;
 import com.nemi.report.model.response.overview.CompareChartResponse;
-import com.nemi.report.model.response.overview.ConfigResponse;
+import com.nemi.report.model.response.overview.ReportSettingResponse;
 import com.nemi.report.model.response.overview.MonthlyTargetResponse;
 import com.nemi.report.model.response.overview.OverviewReportResponse;
 import com.nemi.report.service.BusinessTodayService;
@@ -43,9 +44,10 @@ public class OverviewReportController {
     private final ConfigService configService;
 
     @GetMapping("/revenue")
+    @RequirePermission("REPORTING.OVERVIEW_REPORT.VIEW")
     public ResponseEntity<OverviewReportResponse> getOverviewReport(
-            @RequestParam("from") @DateTimeFormat(pattern = "dd/MM/yyyy") LocalDate from,
-            @RequestParam("to") @DateTimeFormat(pattern = "dd/MM/yyyy") LocalDate to,
+            @RequestParam("from") @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate from,
+            @RequestParam("to") @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate to,
             @RequestParam(value = "compareWith", required = false) CompareWithType compareWith,
             @RequestParam("currency") Currency currency) {
 
@@ -59,10 +61,11 @@ public class OverviewReportController {
         return ResponseEntity.ok(response);
     }
 
+    @RequirePermission("REPORTING.OVERVIEW_REPORT.VIEW")
     @GetMapping("/compare-chart")
     public ResponseEntity<CompareChartResponse> getCompareChart(
-            @RequestParam("from") @DateTimeFormat(pattern = "dd/MM/yyyy") LocalDate from,
-            @RequestParam("to") @DateTimeFormat(pattern = "dd/MM/yyyy") LocalDate to,
+            @RequestParam("from") @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate from,
+            @RequestParam("to") @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate to,
             @RequestParam(value = "compareWith", required = false) CompareWithType compareWith,
             @RequestParam("currency") Currency currency,
             @RequestParam("dataType") OverviewDataType dataType) {
@@ -78,6 +81,7 @@ public class OverviewReportController {
         return ResponseEntity.ok(response);
     }
 
+    @RequirePermission("REPORTING.OVERVIEW_REPORT.VIEW")
     @GetMapping("/business-today")
     public ResponseEntity<BusinessTodayResponse> getBusinessToday(
             @RequestParam("currency") Currency currency) {
@@ -89,6 +93,7 @@ public class OverviewReportController {
         return ResponseEntity.ok(response);
     }
 
+    @RequirePermission("REPORTING.OVERVIEW_REPORT.VIEW")
     @GetMapping("/monthly-target")
     public ResponseEntity<MonthlyTargetResponse> getMonthlyTarget(
             @RequestParam("currency") Currency currency) {
@@ -100,6 +105,7 @@ public class OverviewReportController {
         return ResponseEntity.ok(response);
     }
 
+    @RequirePermission("REPORTING.OVERVIEW_REPORT.EDIT")
     @PutMapping("/monthly-target")
     public ResponseEntity<String> updateMonthlyTarget(
             @Valid @RequestBody UpdateMonthlyTargetRequest request) {
@@ -108,18 +114,20 @@ public class OverviewReportController {
         return ResponseEntity.ok("200");
     }
 
+    @RequirePermission("REPORTING.OVERVIEW_REPORT.VIEW")
     @GetMapping("/config")
-    public ResponseEntity<ConfigResponse> getConfig() {
+    public ResponseEntity<ReportSettingResponse> getReportSetting() {
 
-        ConfigResponse response = configService.getConfig();
+        ReportSettingResponse response = configService.getConfig();
         return ResponseEntity.ok(response);
     }
 
+    @RequirePermission("REPORTING.OVERVIEW_REPORT.EDIT")
     @PutMapping("/config")
-    public ResponseEntity<ConfigResponse> updateConfig(
-            @RequestBody ConfigRequest request) {
+    public ResponseEntity<ReportSettingResponse> updateReportSetting(
+            @RequestBody UpdateReportSettingRequest request) {
 
-        ConfigResponse response = configService.updateConfig(request);
+        ReportSettingResponse response = configService.updateConfig(request);
         return ResponseEntity.ok(response);
     }
 }

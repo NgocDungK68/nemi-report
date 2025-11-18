@@ -135,7 +135,7 @@ nemi:
             titleEn: "Successful Orders"
             titleVi: "Đơn thành công"
             type: INTEGER
-            formula: "(COUNT(DISTINCT oi.order_id) FILTER (WHERE o.status IN ('DELIVERED')) - COUNT(DISTINCT oi.order_id) FILTER (WHERE o.status = 'DELIVERED'))"
+            formula: "COUNT(DISTINCT oi.order_id) FILTER (WHERE o.status IN ('DELIVERED'))"
             summary-type: SUM
             source: INSIGHT
             mapping: successful_orders
@@ -151,3 +151,11 @@ nemi:
             mapping: cancelled_orders
             hasFilter: true
 
+          - code: created_at
+            titleEn: "Created at"
+            titleVi: "Ngày tạo"
+            type: TIMESTAMP
+            mapping: created_at
+            source: MAIN
+            summary-type: NONE
+            hasFilter: true

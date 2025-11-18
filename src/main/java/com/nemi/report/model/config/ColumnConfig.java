@@ -34,4 +34,5 @@ public class ColumnConfig {
     private List<ColumnEnumData> enums;
     private Boolean updatable = false;
     private Boolean isUseCent = false;
+    private Boolean isPercent;
 }

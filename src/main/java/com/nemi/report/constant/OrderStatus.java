@@ -67,4 +67,8 @@ public enum OrderStatus {
                 OrderStatus.FAILED.getCode()
         );
     }
+
+    public static List<String> getSuccessfulOrdersStatus() {
+        return List.of(OrderStatus.DELIVERED.getCode());
+    }
 }

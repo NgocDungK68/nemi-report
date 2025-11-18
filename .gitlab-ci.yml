@@ -1,10 +1,13 @@
-image: docker:24.0.7
+image:
+  name: docker:25.0
+  pull_policy: always  # ← Force pull mỗi lần, không dùng cache
 
 services:
-  - docker:dind
+  - name: docker:25.0-dind
+    alias: docker
+    pull_policy: always  # ← Force pull service image
 
 variables:
-  DEPLOY_SERVER_IP: "13.212.48.23"
   AWS_DEFAULT_REGION: $AWS_REGION
   MAVEN_OPTS: "-Djava.awt.headless=true -Dmaven.repo.local=./.m2/repository"
   ECR_REGISTRY: "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
@@ -44,7 +47,7 @@ build:
       - build-artifacts/
       - version.txt
       - project-name.txt
-      - docker-compose.yml # khong su dung phase deploy
+      - docker-compose.yml
       - commit-hash.txt
     expire_in: 1 hour
   rules:
@@ -52,7 +55,7 @@ build:
 
 dockerize:
   stage: dockerize
-  image: docker:24.0.7
+  image: docker:25.0
   services:
     - docker:dind
   dependencies:

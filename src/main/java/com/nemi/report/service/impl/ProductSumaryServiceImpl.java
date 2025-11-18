@@ -21,6 +21,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
+import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -43,7 +44,7 @@ public class ProductSumaryServiceImpl implements ProductSumaryService {
     private static final List<String> excludeColumns = List.of("product_id","product_name", "status","created_time");
 
     @Override
-    public ProductSummaryResponse getProductSumary(ProductSummaryRequest request) {
+    public ProductSummaryResponse getProductSumary(ProductSummaryRequest request,String productid) {
         LinkedHashSet<ColumnConfig> viewColumns = new LinkedHashSet<>();
         LinkedHashSet<ColumnConfig> searchColumns = new LinkedHashSet<>();
 
@@ -82,23 +83,21 @@ public class ProductSumaryServiceImpl implements ProductSumaryService {
         LocalDate start = request.getStartDate();
         LocalDate end = request.getEndDate();
 
-        List<Map<String, Object>> data = productCustomRepository.search(new LinkedHashSet<>(searchColumns), queryParameters, orderParameters, start, end, pageRequest, claimUtil.getUserName());
+        List<Map<String, Object>> data = productCustomRepository.search(new LinkedHashSet<>(searchColumns), queryParameters, orderParameters, start, end, pageRequest, claimUtil.getUserName(), productid);
 
-        PageCountData countData = productCustomRepository.count(queryParameters, start, end, pageRequest, claimUtil.getUserName());
+        PageCountData countData = productCustomRepository.count(queryParameters, start, end, pageRequest, claimUtil.getUserName(),productid);
 
         ProductSummaryResponse response = getFromResultSQL(data, viewColumns, start, end, countData.getTotalElements(), countData.getTotalPages());
         return response;
-
-
     }
 
-    private ProductSummaryResponse getFromResultSQL(
+    public ProductSummaryResponse getFromResultSQL(
             List<Map<String, Object>> rows,
             Set<ColumnConfig> columns,
             LocalDate start,
             LocalDate end,
-            long totalElements,
-            int totalPages
+            Long totalElements,
+            Integer totalPages
     ) {
         ProductSummaryResponse response = new ProductSummaryResponse();
         List<ProductSummaryResponse.DataItem> dataList = new ArrayList<>();
@@ -128,7 +127,15 @@ public class ProductSumaryServiceImpl implements ProductSumaryService {
                         if (value instanceof Number n) {
                             extraData.put(key, n);
                         } else if (matchColumn.getType().equals(ColumnDataType.TIMESTAMP)) {
-                            extraData.put(key, convertInstantToString((Instant) value, matchColumn));
+                            if (value instanceof Timestamp ts) {
+                                extraData.put(key, convertInstantToString(ts.toInstant(), matchColumn));
+
+                            } else if (value instanceof Instant i) {
+                                extraData.put(key, convertInstantToString(i, matchColumn));
+
+                            } else {
+                                extraData.put(key, null);
+                            }
                         } else {
                             extraData.put(key, value);
                         }

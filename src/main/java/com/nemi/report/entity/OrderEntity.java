@@ -1,8 +1,10 @@
 package com.nemi.report.entity;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.nemi.report.entity.key.OrderPosId;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
+import jakarta.persistence.IdClass;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -19,6 +21,7 @@ import java.math.BigDecimal;
 @NoArgsConstructor
 @AllArgsConstructor
 @Table(schema = "product_manager", name = "orders")
+@IdClass(OrderPosId.class)
 public class OrderEntity extends BaseEntity {
     @Id
     @JsonProperty("order_id")
@@ -27,6 +30,7 @@ public class OrderEntity extends BaseEntity {
     @JsonProperty("order_code")
     private String orderCode;
 
+    @Id
     @JsonProperty("pos_id")
     private String posId;
 
@@ -59,4 +63,10 @@ public class OrderEntity extends BaseEntity {
 
     @JsonProperty("discount_amount")
     private BigDecimal discountAmount;
+
+    @JsonProperty("sale_id")
+    private String saleId;
+
+    @JsonProperty("department_id")
+    private String departmentId;
 }

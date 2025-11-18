@@ -18,10 +18,8 @@ import lombok.experimental.SuperBuilder;
 @SuperBuilder
 @Table(name = "report_setting", schema = "system_manager")
 public class ReportSettingEntity extends BaseEntity {
-    @Id
-    @Column(name = "user_id")
-    private String userId;
 
+    @Id
     @Column(name = "department_id")
     private String departmentId;
 

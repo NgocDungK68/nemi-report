@@ -14,7 +14,7 @@ import com.nemi.report.model.request.CurrencyRates;
 import com.nemi.report.model.request.overview.MonthlyTargetRequest;
 import com.nemi.report.model.request.overview.UpdateMonthlyTargetRequest;
 import com.nemi.report.model.response.CurrencyRateResponse;
-import com.nemi.report.model.response.overview.ConfigResponse;
+import com.nemi.report.model.response.overview.ReportSettingResponse;
 import com.nemi.report.model.response.overview.MonthlyTargetResponse;
 import com.nemi.report.model.response.overview.RevenueSummary;
 import com.nemi.report.repository.MonthlyTargetRepository;
@@ -75,7 +75,7 @@ public class MonthlyTargetServiceImpl implements MonthlyTargetService {
                     request.getCurrency()
             );
 
-            ConfigResponse config = configService.getConfig();
+            ReportSettingResponse config = configService.getConfig();
 
             // KPI
             MonthlyTargetId monthlyTargetId = new MonthlyTargetId(claimUtil.getDepartmentId(), request.getCurrency().getCode());
@@ -89,7 +89,8 @@ public class MonthlyTargetServiceImpl implements MonthlyTargetService {
 
             // Thông tin doanh số và số lượng orders trong tháng tính đến thời điểm hiện tại
             LocalDateTime firstDayOfMonth = LocalDate.now().withDayOfMonth(1).atStartOfDay();
-            List<OrderEntity> ordersThisMonth = orderRepository.findByStatusInAndUpdatedAtBetween(
+            List<OrderEntity> ordersThisMonth = orderRepository.findByDepartmentIdAndStatusInAndUpdatedAtBetween(
+                    claimUtil.getDepartmentId(),
                     OrderStatus.getTotalOrdersStatus(),
                     firstDayOfMonth,
                     LocalDate.now().atTime(LocalTime.MAX)

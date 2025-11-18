@@ -7,7 +7,6 @@ import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 
-import java.math.BigDecimal;
 import java.util.List;
 import java.util.Objects;
 
@@ -19,8 +18,6 @@ public class ProductConfig {
     private List<String> defaultColumns;
     private List<ColumnCategoryConfig> columnCategories;
     private List<SystemViewConfig> systemViews;
-    private BigDecimal usdExchangeRate;
-    private List<Integer> whitelistCompanyIds;
 
     public List<ColumnConfig> getListColumns() {
         return columnCategories.stream().flatMap(cate -> cate.getColumns().stream()).toList();
