@@ -69,11 +69,18 @@ public class ProductChartServiceImpl implements ProductChartService {
         List<ProductChartResponse.DateData> dateDataList = new ArrayList<>();
         for (LocalDate date = request.getStartDate(); !date.isAfter(request.getEndDate()); date = date.plusDays(1)) {
             ProductSummaryResponse summaryResponseByDay = getSummaryResponse(code, date, date, productId);
-            BigDecimal value = toBigDecimal(summaryResponseByDay.getData().get(0).getExtraData().get(code));
+            List<ProductSummaryResponse.DataItem> items = summaryResponseByDay.getData();
+
+            BigDecimal value = BigDecimal.ZERO;
+            if (ObjectUtils.isNotEmpty(items)) {
+                value = toBigDecimal(items.get(0).getExtraData().get(code));
+            }
 
             ProductChartResponse.DateData dateData = ProductChartResponse.DateData.builder()
                     .value(value)
-                    .percent(value.divide(summary.getValue(), RoundingMode.HALF_UP))
+                    .percent(summary.getValue().compareTo(BigDecimal.ZERO) == 0
+                            ? BigDecimal.ZERO
+                            : value.divide(summary.getValue(), RoundingMode.HALF_UP))
                     .build();
 
             dateDataList.add(dateData);
