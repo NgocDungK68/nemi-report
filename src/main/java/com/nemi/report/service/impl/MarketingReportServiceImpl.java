@@ -2,6 +2,7 @@ package com.nemi.report.service.impl;
 
 import com.nemi.constant.CurrencyCodeEnum;
 import com.nemi.exception.TechnicalException;
+import com.nemi.exception.ValidationException;
 import com.nemi.exception.pojo.AlertMessages;
 import com.nemi.report.client.AdsManagerClient;
 import com.nemi.report.client.SystemManagerClient;
@@ -15,7 +16,10 @@ import com.nemi.report.model.config.ColumnConfig;
 import com.nemi.report.model.pojo.OrderQueryModel;
 import com.nemi.report.model.pojo.ReportModel;
 import com.nemi.report.model.request.ReportSummaryRequest;
-import com.nemi.report.model.response.ReportSummaryResponse;
+import com.nemi.report.model.request.marketing.MarketingChartRequest;
+import com.nemi.report.model.response.marketing.MarketingChartResponse;
+import com.nemi.report.model.response.marketing.MarketingDataItem;
+import com.nemi.report.model.response.marketing.MarketingReportResponse;
 import com.nemi.report.model.response.overview.ReportSettingResponse;
 import com.nemi.report.model.system_manager.ExchangeRateResponse;
 import com.nemi.report.repository.OrderCustomRepository;
@@ -42,108 +46,211 @@ import java.util.Objects;
 @RequiredArgsConstructor
 public class MarketingReportServiceImpl implements MarketingReportService {
 
+    private static final int DECIMAL_SCALE = 2;
+    private static final int REVENUE_DECIMAL_SCALE = 4;
+    private static final String SUMMARY_TYPE_SUM = "SUM";
+
     private final ClaimUtil claimUtil;
     private final ConfigService configService;
     private final AdsManagerClient adsManagerClient;
     private final MarketingColumnConfig marketingColumnConfig;
-
     private final OrderCustomRepository orderCustomRepository;
     private final SystemManagerClient systemManagerClient;
 
     @Override
-    public ReportSummaryResponse getMarketingReportSummary(ReportSummaryRequest request) {
-        String departmentId = claimUtil.getDepartmentId();
-
+    public MarketingReportResponse getMarketingReportSummary(ReportSummaryRequest request) {
         try {
             ReportSettingResponse reportSetting = configService.getConfig();
 
-            // 1. Get summary of orders
-            List<OrderQueryModel> orderQueryModel = new ArrayList<>();
-            if (isContainOrder(request)) {
-                orderQueryModel = orderCustomRepository.reportOrderOfDepartmentByDate(departmentId, request.getStartDate(), request.getEndDate(), reportSetting.getConfirmOrderWhen(), reportSetting.getReturnOrderWhen());
+            List<OrderQueryModel> orderQueryModel = fetchOrderQueryModels(
+                    request,
+                    request.getCurrency(),
+                    request.getStartDate(),
+                    request.getEndDate(),
+                    reportSetting
+            );
 
-                // Exchange revenue if currency is not VND
-                if (!CurrencyCodeEnum.VND.equals(request.getCurrency())) {
-                    exchangeRevenue(orderQueryModel, request);
-                }
-            }
+            List<AdCostByDate> adCostByDate = fetchAdsCostIfNeeded(
+                    request,
+                    request.getCurrency(),
+                    request.getStartDate(),
+                    request.getEndDate()
+            );
 
-            // 2. Get ads cost if needed
-            List<AdCostByDate> adCostByDate = new ArrayList<>();
-            if (isContainAdsCost(request)) {
-                adCostByDate = getAdsCostByDate(request);
-            }
-
-            // 3. Combine data
             List<ReportModel> reportModels = combineData(orderQueryModel, adCostByDate, request.getStartDate(), request.getEndDate());
 
-            // 4. Build response
-            return buildReportSummaryResponse(reportModels, request);
+            // Pagination
+            List<ReportModel> pagedModels = paginateReportModels(reportModels, request.getPage(), request.getSize());
+
+            // Build response
+            MarketingReportResponse response = buildReportSummaryResponse(pagedModels, reportModels, request);
+            response.setTotalElements((long) reportModels.size());
+            response.setTotalPages(calculateTotalPages(reportModels.size(), request.getSize()));
+            return response;
+        } catch (ValidationException e) {
+            throw e;
         } catch (Exception e) {
             log.error("[getMarketingReportSummary] error: {}", e.getMessage(), e);
             throw new TechnicalException(AlertMessages.alert(TechnicalAlertCode.SYSTEM_ERROR));
         }
     }
 
-    private void exchangeRevenue(List<OrderQueryModel> orderQueryModel, ReportSummaryRequest request) {
+    @Override
+    public MarketingChartResponse getMarketingChart(MarketingChartRequest request) {
+        try {
+            ReportSettingResponse reportSetting = configService.getConfig();
+            ColumnConfig columnChart = marketingColumnConfig.getColumnByCode(request.getChartData().getValue());
+
+            List<OrderQueryModel> orderQueryModel = fetchOrderQueryModels(
+                    columnChart,
+                    request.getCurrency(),
+                    request.getStartDate(),
+                    request.getEndDate(),
+                    reportSetting
+            );
+
+            List<AdCostByDate> adCostByDate = fetchAdsCostIfNeeded(
+                    columnChart,
+                    request.getCurrency(),
+                    request.getStartDate(),
+                    request.getEndDate()
+            );
+
+            List<ReportModel> reportModels = combineData(orderQueryModel, adCostByDate, request.getStartDate(), request.getEndDate());
+
+            return buildMarketingChartResponse(reportModels, columnChart);
+        } catch (ValidationException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("[getMarketingChart] error: {}", e.getMessage(), e);
+            throw new TechnicalException(AlertMessages.alert(TechnicalAlertCode.SYSTEM_ERROR));
+        }
+    }
+
+    private List<OrderQueryModel> fetchOrderQueryModels(Object requestOrColumn, CurrencyCodeEnum currency, LocalDate startDate, LocalDate endDate, ReportSettingResponse reportSetting) {
+        List<OrderQueryModel> orderQueryModel = new ArrayList<>();
+
+        boolean needsOrderData = (requestOrColumn instanceof ReportSummaryRequest)
+                ? isContainOrder((ReportSummaryRequest) requestOrColumn)
+                : isContainOrder((ColumnConfig) requestOrColumn);
+
+        if (needsOrderData) {
+            String departmentId = claimUtil.getDepartmentId();
+            orderQueryModel = orderCustomRepository.reportOrderOfDepartmentByDate(
+                    departmentId,
+                    startDate,
+                    endDate,
+                    reportSetting.getConfirmOrderWhen(),
+                    reportSetting.getReturnOrderWhen()
+            );
+
+            exchangeRevenue(orderQueryModel, currency, startDate, endDate);
+        }
+
+        return orderQueryModel;
+    }
+
+    private List<AdCostByDate> fetchAdsCostIfNeeded(Object requestOrColumn, CurrencyCodeEnum currency, LocalDate startDate, LocalDate endDate) {
+        List<AdCostByDate> adCostByDate = new ArrayList<>();
+
+        boolean needsAdsCost = (requestOrColumn instanceof ReportSummaryRequest)
+                ? isContainAdsCost((ReportSummaryRequest) requestOrColumn)
+                : isContainAdsCost((ColumnConfig) requestOrColumn);
+
+        if (needsAdsCost) {
+            adCostByDate = getAdsCostByDate(currency, startDate, endDate);
+        }
+
+        return adCostByDate;
+    }
+
+    private List<ReportModel> paginateReportModels(List<ReportModel> reportModels, int page, int size) {
+        int totalElements = reportModels.size();
+        int fromIndex = Math.min(page * size, totalElements);
+        int toIndex = Math.min(fromIndex + size, totalElements);
+        return reportModels.subList(fromIndex, toIndex);
+    }
+
+    private int calculateTotalPages(int totalElements, int size) {
+        return (int) Math.ceil(totalElements / (double) size);
+    }
+
+    private void exchangeRevenue(List<OrderQueryModel> orderQueryModel, CurrencyCodeEnum currency, LocalDate startDate, LocalDate endDate) {
         ExchangeRateResponse exchangeRateResponse = getExchangeRate(
                 claimUtil.getCompanyId(),
                 CurrencyCodeEnum.VND.name(),
-                request.getCurrency().name(),
-                request.getStartDate(),
-                request.getEndDate()
+                currency.name(),
+                startDate,
+                endDate
         );
 
+        validateExchangeRateResponse(exchangeRateResponse);
+        Map<String, BigDecimal> rateByDateMap = buildExchangeRateMap(exchangeRateResponse);
+        applyExchangeRatesToOrders(orderQueryModel, rateByDateMap, currency);
+    }
+
+    private void validateExchangeRateResponse(ExchangeRateResponse exchangeRateResponse) {
         if (exchangeRateResponse == null || exchangeRateResponse.getRatesByDate() == null) {
             log.error("[exchangeRevenue] Exchange rate response is null");
             throw new TechnicalException(AlertMessages.alert(TechnicalAlertCode.SYSTEM_ERROR));
         }
+    }
 
-        // Create a map of rates by date for quick lookup
+    private Map<String, BigDecimal> buildExchangeRateMap(ExchangeRateResponse exchangeRateResponse) {
         Map<String, BigDecimal> rateByDateMap = new HashMap<>();
         for (var rateByDate : exchangeRateResponse.getRatesByDate()) {
             String dateStr = DateUtils.dateToString(rateByDate.getDate());
             rateByDateMap.put(dateStr, rateByDate.getRate());
         }
+        return rateByDateMap;
+    }
 
-        // Exchange revenue and true revenue for each order
+    private void applyExchangeRatesToOrders(List<OrderQueryModel> orderQueryModel, Map<String, BigDecimal> rateByDateMap, CurrencyCodeEnum currency) {
         orderQueryModel.forEach(order -> {
-            // Get rate by date
             BigDecimal rate = rateByDateMap.getOrDefault(order.getReportDate(), BigDecimal.ONE);
 
-            // Exchange revenue and true revenue
             if (order.getRevenue() != null) {
-                order.setRevenue(CurrencyUtils.exchange(request.getCurrency(), order.getRevenue(), rate));
+                order.setRevenue(CurrencyUtils.exchange(currency, order.getRevenue(), rate));
             }
             if (order.getTrueRevenue() != null) {
-                order.setTrueRevenue(CurrencyUtils.exchange(request.getCurrency(), order.getTrueRevenue(), rate));
+                order.setTrueRevenue(CurrencyUtils.exchange(currency, order.getTrueRevenue(), rate));
             }
         });
     }
 
     private boolean isContainAdsCost(ReportSummaryRequest request) {
-        return request.getColumns().stream()
-                .anyMatch(c -> {
-                    ColumnConfig column = marketingColumnConfig.getColumnByCode(c.getCode());
-                    return Objects.nonNull(column) && ProductSource.ADS.equals(column.getSource());
-                });
+        return containsSource(request.getColumns(), ProductSource.ADS);
+    }
+
+    private boolean isContainAdsCost(ColumnConfig column) {
+        return ProductSource.ADS.equals(column.getSource());
     }
 
     private boolean isContainOrder(ReportSummaryRequest request) {
-        return request.getColumns().stream()
+        return containsSource(request.getColumns(), ProductSource.ORDER);
+    }
+
+    private boolean isContainOrder(ColumnConfig column) {
+        return ProductSource.ORDER.equals(column.getSource());
+    }
+
+    private boolean containsSource(List<?> columns, ProductSource source) {
+        return columns.stream()
                 .anyMatch(c -> {
-                    ColumnConfig column = marketingColumnConfig.getColumnByCode(c.getCode());
-                    return Objects.nonNull(column) && ProductSource.ORDER.equals(column.getSource());
+                    ColumnConfig column = (c instanceof ColumnConfig)
+                            ? (ColumnConfig) c
+                            : marketingColumnConfig.getColumnByCode(((com.nemi.report.model.request.ColumnRequest) c).getCode());
+                    return Objects.nonNull(column) && source.equals(column.getSource());
                 });
     }
 
-    private List<AdCostByDate> getAdsCostByDate(ReportSummaryRequest request) {
+    private List<AdCostByDate> getAdsCostByDate(CurrencyCodeEnum currency, LocalDate startDate, LocalDate endDate) {
         AdsCostOfDepartmentRequest adsCostOfDepartmentRequest = AdsCostOfDepartmentRequest.builder()
                 .companyId(claimUtil.getCompanyId())
                 .departmentId(claimUtil.getDepartmentId())
-                .startDate(request.getStartDate())
-                .endDate(request.getEndDate())
-                .currency(request.getCurrency().name())
+                .startDate(startDate)
+                .endDate(endDate)
+                .currency(currency.name())
                 .build();
         AdsCostResponse response = adsManagerClient.getAdsCostOfDepartment(adsCostOfDepartmentRequest).getBody();
         if (Objects.isNull(response)) {
@@ -154,127 +261,151 @@ public class MarketingReportServiceImpl implements MarketingReportService {
     }
 
     private List<ReportModel> combineData(List<OrderQueryModel> orderQueryModels, List<AdCostByDate> adCostByDates, LocalDate startDate, LocalDate endDate) {
-
-        // Create maps for quick lookup by date
-        Map<String, OrderQueryModel> orderMap = new HashMap<>();
-        for (OrderQueryModel orderQuery : orderQueryModels) {
-            orderMap.put(orderQuery.getReportDate(), orderQuery);
-        }
-
-        Map<String, BigDecimal> adCostMap = new HashMap<>();
-        for (AdCostByDate adCost : adCostByDates) {
-            adCostMap.put(adCost.getReportDate(), adCost.getSpent());
-        }
+        Map<String, OrderQueryModel> orderMap = buildOrderMap(orderQueryModels);
+        Map<String, BigDecimal> adCostMap = buildAdCostMap(adCostByDates);
 
         List<ReportModel> reportModels = new ArrayList<>();
-
-        // Iterate through all days between startDate and endDate (inclusive)
         LocalDate currentDate = startDate;
+
         while (!currentDate.isAfter(endDate)) {
             String dateStr = DateUtils.dateToString(currentDate);
-
-            // Get order data for this date, or create empty data
-            OrderQueryModel orderQuery = orderMap.get(dateStr);
-
-            ReportModel reportModel = new ReportModel();
-            reportModel.setReportDate(dateStr);
-
-            // Set order data (or zeros if not found)
-            if (orderQuery != null) {
-                reportModel.setOrders(orderQuery.getOrders());
-                reportModel.setConfirmedOrders(orderQuery.getConfirmedOrders());
-                reportModel.setReturnedOrders(orderQuery.getReturnedOrders());
-                reportModel.setSuccessOrders(orderQuery.getSuccessOrders());
-                reportModel.setRevenue(orderQuery.getRevenue());
-                reportModel.setTrueRevenue(orderQuery.getTrueRevenue());
-            } else {
-                reportModel.setOrders(0L);
-                reportModel.setConfirmedOrders(0L);
-                reportModel.setReturnedOrders(0L);
-                reportModel.setSuccessOrders(0L);
-                reportModel.setRevenue(BigDecimal.ZERO);
-                reportModel.setTrueRevenue(BigDecimal.ZERO);
-            }
-
-            // Get ad cost for this date (or zero if not found)
-            BigDecimal adCost = adCostMap.getOrDefault(dateStr, BigDecimal.ZERO);
-            reportModel.setAdCost(adCost);
-
-            // Calculate profit = trueRevenue - adCost
-            BigDecimal profit = reportModel.getTrueRevenue().subtract(adCost);
-            reportModel.setProfit(profit);
-
-            // Calculate adCostPerOrder = adCost / orders (if orders > 0)
-            if (reportModel.getOrders() > 0) {
-                BigDecimal adCostPerOrder = adCost.divide(BigDecimal.valueOf(reportModel.getOrders()), 2, RoundingMode.HALF_UP);
-                reportModel.setAdCostPerOrder(adCostPerOrder);
-            } else {
-                reportModel.setAdCostPerOrder(BigDecimal.ZERO);
-            }
-
-            // Calculate adCostPerConfirmedOrder = adCost / confirmedOrders (if confirmedOrders > 0)
-            if (reportModel.getConfirmedOrders() > 0) {
-                BigDecimal adCostPerConfirmedOrder = adCost.divide(BigDecimal.valueOf(reportModel.getConfirmedOrders()), 2, RoundingMode.HALF_UP);
-                reportModel.setAdCostPerConfirmedOrder(adCostPerConfirmedOrder);
-            } else {
-                reportModel.setAdCostPerConfirmedOrder(BigDecimal.ZERO);
-            }
-
-            // Calculate adCostPerRevenue = adCost / revenue (if revenue > 0)
-            if (reportModel.getRevenue().compareTo(BigDecimal.ZERO) > 0) {
-                BigDecimal adCostPerRevenue = adCost.divide(reportModel.getRevenue(), 4, RoundingMode.HALF_UP);
-                reportModel.setAdCostPerRevenue(adCostPerRevenue.doubleValue());
-            } else {
-                reportModel.setAdCostPerRevenue(0.0);
-            }
-
+            ReportModel reportModel = buildReportModelForDate(dateStr, orderMap, adCostMap);
             reportModels.add(reportModel);
-
-            // Move to next day
             currentDate = currentDate.plusDays(1);
         }
 
         return reportModels;
     }
 
-    private ReportSummaryResponse buildReportSummaryResponse(List<ReportModel> reportModels, ReportSummaryRequest request) {
-        ReportSummaryResponse response = new ReportSummaryResponse();
-        List<ReportSummaryResponse.DataItem> dataItems = new ArrayList<>();
-
-        // Get column configurations
-        List<ColumnConfig> columnConfigs = request.getColumns().stream()
-                .map(columnRequest -> marketingColumnConfig.getColumnByCode(columnRequest.getCode()))
-                .filter(Objects::nonNull)
-                .toList();
-
-        // Build data items for each report model
-        for (ReportModel reportModel : reportModels) {
-            ReportSummaryResponse.DataItem dataItem = new ReportSummaryResponse.DataItem();
-
-            // Convert date from yyyy-MM-dd to dd/MM/yyyy
-            dataItem.setDate(reportModel.getReportDate());
-
-            // Build extraData based on requested columns
-            Map<String, Object> extraData = new HashMap<>();
-            for (ColumnConfig columnConfig : columnConfigs) {
-                String code = columnConfig.getCode();
-                String mapping = columnConfig.getMapping();
-
-                Object value = getValueFromReportModel(reportModel, mapping);
-                extraData.put(code, value);
-            }
-
-            dataItem.setExtraData(extraData);
-            dataItems.add(dataItem);
+    private Map<String, OrderQueryModel> buildOrderMap(List<OrderQueryModel> orderQueryModels) {
+        Map<String, OrderQueryModel> orderMap = new HashMap<>();
+        for (OrderQueryModel orderQuery : orderQueryModels) {
+            orderMap.put(orderQuery.getReportDate(), orderQuery);
         }
+        return orderMap;
+    }
 
+    private Map<String, BigDecimal> buildAdCostMap(List<AdCostByDate> adCostByDates) {
+        Map<String, BigDecimal> adCostMap = new HashMap<>();
+        for (AdCostByDate adCost : adCostByDates) {
+            adCostMap.put(adCost.getReportDate(), adCost.getSpent());
+        }
+        return adCostMap;
+    }
+
+    private ReportModel buildReportModelForDate(String dateStr, Map<String, OrderQueryModel> orderMap, Map<String, BigDecimal> adCostMap) {
+        OrderQueryModel orderQuery = orderMap.get(dateStr);
+        BigDecimal adCost = adCostMap.getOrDefault(dateStr, BigDecimal.ZERO);
+
+        ReportModel reportModel = new ReportModel();
+        reportModel.setReportDate(dateStr);
+
+        populateOrderData(reportModel, orderQuery);
+        reportModel.setAdCost(adCost);
+        calculateDerivedMetrics(reportModel, adCost);
+
+        return reportModel;
+    }
+
+    private void populateOrderData(ReportModel reportModel, OrderQueryModel orderQuery) {
+        if (orderQuery != null) {
+            reportModel.setOrders(orderQuery.getOrders());
+            reportModel.setConfirmedOrders(orderQuery.getConfirmedOrders());
+            reportModel.setReturnedOrders(orderQuery.getReturnedOrders());
+            reportModel.setSuccessOrders(orderQuery.getSuccessOrders());
+            reportModel.setRevenue(orderQuery.getRevenue());
+            reportModel.setTrueRevenue(orderQuery.getTrueRevenue());
+        } else {
+            reportModel.setOrders(0L);
+            reportModel.setConfirmedOrders(0L);
+            reportModel.setReturnedOrders(0L);
+            reportModel.setSuccessOrders(0L);
+            reportModel.setRevenue(BigDecimal.ZERO);
+            reportModel.setTrueRevenue(BigDecimal.ZERO);
+        }
+    }
+
+    private void calculateDerivedMetrics(ReportModel reportModel, BigDecimal adCost) {
+        // Calculate profit = trueRevenue - adCost
+        BigDecimal profit = reportModel.getTrueRevenue().subtract(adCost);
+        reportModel.setProfit(profit);
+
+        // Calculate adCostPerOrder
+        reportModel.setAdCostPerOrder(calculateAdCostPerOrder(adCost, reportModel.getOrders()));
+
+        // Calculate adCostPerConfirmedOrder
+        reportModel.setAdCostPerConfirmedOrder(calculateAdCostPerOrder(adCost, reportModel.getConfirmedOrders()));
+
+        // Calculate adCostPerRevenue
+        reportModel.setAdCostPerRevenue(calculateAdCostPerRevenue(adCost, reportModel.getRevenue()));
+    }
+
+    private BigDecimal calculateAdCostPerOrder(BigDecimal adCost, Long orders) {
+        if (orders > 0) {
+            return adCost.divide(BigDecimal.valueOf(orders), DECIMAL_SCALE, RoundingMode.HALF_UP);
+        }
+        return BigDecimal.ZERO;
+    }
+
+    private Double calculateAdCostPerRevenue(BigDecimal adCost, BigDecimal revenue) {
+        if (revenue.compareTo(BigDecimal.ZERO) > 0) {
+            return adCost.divide(revenue, REVENUE_DECIMAL_SCALE, RoundingMode.HALF_UP).doubleValue();
+        }
+        return 0.0;
+    }
+
+    private MarketingReportResponse buildReportSummaryResponse(List<ReportModel> pagedReportModels, List<ReportModel> allReportModels, ReportSummaryRequest request) {
+        List<ColumnConfig> columnConfigs = getColumnConfigs(request);
+        List<MarketingDataItem> dataItems = buildDataItems(pagedReportModels, columnConfigs);
+        Map<String, Object> summary = buildSummary(allReportModels, columnConfigs);
+
+        MarketingReportResponse response = new MarketingReportResponse();
         response.setData(dataItems);
-
-        // Build summary - sum/average of all columns
-        Map<String, Object> summary = buildSummary(reportModels, columnConfigs);
         response.setSummary(summary);
 
         return response;
+    }
+
+    private List<ColumnConfig> getColumnConfigs(ReportSummaryRequest request) {
+        return request.getColumns().stream()
+                .map(columnRequest -> marketingColumnConfig.getColumnByCode(columnRequest.getCode()))
+                .filter(Objects::nonNull)
+                .toList();
+    }
+
+    private List<MarketingDataItem> buildDataItems(List<ReportModel> reportModels, List<ColumnConfig> columnConfigs) {
+        List<MarketingDataItem> dataItems = new ArrayList<>();
+
+        for (ReportModel reportModel : reportModels) {
+            MarketingDataItem dataItem = new MarketingDataItem();
+            dataItem.setDate(reportModel.getReportDate());
+            dataItem.setExtraData(buildExtraData(reportModel, columnConfigs));
+            dataItems.add(dataItem);
+        }
+
+        return dataItems;
+    }
+
+    private Map<String, Object> buildExtraData(ReportModel reportModel, List<ColumnConfig> columnConfigs) {
+        Map<String, Object> extraData = new HashMap<>();
+
+        for (ColumnConfig columnConfig : columnConfigs) {
+            String code = columnConfig.getCode();
+            String mapping = columnConfig.getMapping();
+            Object value = getValueFromReportModel(reportModel, mapping);
+            extraData.put(code, value);
+        }
+
+        return extraData;
+    }
+
+    private MarketingChartResponse buildMarketingChartResponse(List<ReportModel> reportModels, ColumnConfig columnConfig) {
+        List<ColumnConfig> columnConfigs = List.of(columnConfig);
+        List<MarketingDataItem> dataItems = buildDataItems(reportModels, columnConfigs);
+
+        return MarketingChartResponse.builder()
+                .data(dataItems)
+                .build();
     }
 
     private Object getValueFromReportModel(ReportModel reportModel, String mapping) {
@@ -311,7 +442,7 @@ public class MarketingReportServiceImpl implements MarketingReportService {
 
             // Calculate summary based on summary type (SUM or AVG)
             Object summaryValue;
-            if (columnConfig.getSummaryType() == null || columnConfig.getSummaryType().toString().equals("SUM")) {
+            if (columnConfig.getSummaryType() == null || columnConfig.getSummaryType().toString().equals(SUMMARY_TYPE_SUM)) {
                 summaryValue = calculateSum(reportModels, mapping);
             } else {
                 summaryValue = calculateAverage(reportModels, mapping);
@@ -355,13 +486,13 @@ public class MarketingReportServiceImpl implements MarketingReportService {
                 BigDecimal sum = reportModels.stream()
                         .map(ReportModel::getAdCostPerOrder)
                         .reduce(BigDecimal.ZERO, BigDecimal::add);
-                yield sum.divide(BigDecimal.valueOf(reportModels.size()), 2, RoundingMode.HALF_UP);
+                yield sum.divide(BigDecimal.valueOf(reportModels.size()), DECIMAL_SCALE, RoundingMode.HALF_UP);
             }
             case "ads_cost_per_confirmed_order" -> {
                 BigDecimal sum = reportModels.stream()
                         .map(ReportModel::getAdCostPerConfirmedOrder)
                         .reduce(BigDecimal.ZERO, BigDecimal::add);
-                yield sum.divide(BigDecimal.valueOf(reportModels.size()), 2, RoundingMode.HALF_UP);
+                yield sum.divide(BigDecimal.valueOf(reportModels.size()), DECIMAL_SCALE, RoundingMode.HALF_UP);
             }
             case "ad_cost_per_revenue" -> {
                 double sum = reportModels.stream()
