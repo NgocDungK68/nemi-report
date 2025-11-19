@@ -8,5 +8,5 @@ import java.util.List;
 
 public interface ProductSumaryService {
 
-    ProductSummaryResponse getProductSumary(ProductSummaryRequest request,String prodcutId);
+    ProductSummaryResponse getProductSumary(ProductSummaryRequest request,String productId);
 }

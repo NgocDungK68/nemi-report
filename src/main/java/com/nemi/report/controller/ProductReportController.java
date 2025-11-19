@@ -33,8 +33,8 @@ public class ProductReportController {
         return ResponseEntity.ok(response);
     }
 
-    @RequirePermission("REPORTING.PRODUCT_REPORT.VIEW")
-    @PostMapping("/{productId}")
+//    @RequirePermission("REPORTING.PRODUCT_REPORT.VIEW")
+    @PostMapping("summary/{productId}")
     public ResponseEntity<ProductSummaryResponse> getProductSummary(
             @PathVariable(name = "productId") String productId,
             @RequestBody ProductSummaryRequest request
@@ -47,14 +47,14 @@ public class ProductReportController {
         return ResponseEntity.ok(response);
     }
 
-    @RequirePermission("REPORTING.PRODUCT_REPORT.VIEW")
+//    @RequirePermission("REPORTING.PRODUCT_REPORT.VIEW")
     @PostMapping("/products-chart")
     public ResponseEntity<ProductsChartResponse> getProductsChart(@RequestBody ReportChartRequest request) {
         ProductsChartResponse response = productChartService.getProductsChart(request);
         return ResponseEntity.ok(response);
     }
 
-    @RequirePermission("REPORTING.PRODUCT_REPORT.VIEW")
+//    @RequirePermission("REPORTING.PRODUCT_REPORT.VIEW")
     @PostMapping("/product-chart/{productId}")
     public ResponseEntity<ProductChartResponse> getProductChart(
             @PathVariable(name = "productId") String productId,

@@ -3,6 +3,7 @@ package com.nemi.report.service.impl;
 import com.nemi.report.configuration.ProductConfig;
 import com.nemi.report.constant.ColumnDataType;
 import com.nemi.report.constant.ProductSource;
+import com.nemi.report.constant.ReportConstants;
 import com.nemi.report.model.OrderParameter;
 import com.nemi.report.model.QueryParameter;
 import com.nemi.report.model.config.ColumnConfig;
@@ -41,10 +42,10 @@ public class ProductSumaryServiceImpl implements ProductSumaryService {
     private final ClaimUtil claimUtil;
     private final HttpServletRequest httpServletRequest;
 
-    private static final List<String> excludeColumns = List.of("product_id","product_name", "status","created_time");
+    private static final List<String> excludeColumns = List.of("product_id", "product_name", "status", "created_time");
 
     @Override
-    public ProductSummaryResponse getProductSumary(ProductSummaryRequest request,String productid) {
+    public ProductSummaryResponse getProductSumary(ProductSummaryRequest request, String productid) {
         LinkedHashSet<ColumnConfig> viewColumns = new LinkedHashSet<>();
         LinkedHashSet<ColumnConfig> searchColumns = new LinkedHashSet<>();
 
@@ -83,9 +84,9 @@ public class ProductSumaryServiceImpl implements ProductSumaryService {
         LocalDate start = request.getStartDate();
         LocalDate end = request.getEndDate();
 
-        List<Map<String, Object>> data = productCustomRepository.search(new LinkedHashSet<>(searchColumns), queryParameters, orderParameters, start, end, pageRequest, claimUtil.getUserName(), productid);
+        List<Map<String, Object>> data = productCustomRepository.search(new LinkedHashSet<>(searchColumns), queryParameters, orderParameters, start, end, pageRequest, claimUtil.getDepartmentId(), productid);
 
-        PageCountData countData = productCustomRepository.count(queryParameters, start, end, pageRequest, claimUtil.getUserName(),productid);
+        PageCountData countData = productCustomRepository.count(queryParameters, start, end, pageRequest, claimUtil.getDepartmentId(), productid);
 
         ProductSummaryResponse response = getFromResultSQL(data, viewColumns, start, end, countData.getTotalElements(), countData.getTotalPages());
         return response;
@@ -143,11 +144,11 @@ public class ProductSumaryServiceImpl implements ProductSumaryService {
                 }
             });
 
-            if (columns.stream().anyMatch(c -> StringUtils.equals(c.getCode(), "report_date_start"))) {
-                extraData.put("report_date_start", DateUtils.dateToString(start));
+            if (columns.stream().anyMatch(c -> StringUtils.equals(c.getCode(), ReportConstants.REPORT_DATE_START))) {
+                extraData.put(ReportConstants.REPORT_DATE_START, DateUtils.dateToString(start));
             }
-            if (columns.stream().anyMatch(c -> StringUtils.equals(c.getCode(), "report_date_end"))) {
-                extraData.put("report_date_end", DateUtils.dateToString(end));
+            if (columns.stream().anyMatch(c -> StringUtils.equals(c.getCode(), ReportConstants.REPORT_DATE_END))) {
+                extraData.put(ReportConstants.REPORT_DATE_END, DateUtils.dateToString(end));
             }
 
 
@@ -164,8 +165,7 @@ public class ProductSumaryServiceImpl implements ProductSumaryService {
 
 
         Map<String, Object> summary = new HashMap<>();
-        summary.put("total_products", totalElements);
-        summary.put("report_range", start + " → " + end);
+        summary.put(ReportConstants.TOTAL_PRODUCT, totalElements);
         response.setSummary(summary);
 
         return response;
