@@ -2,6 +2,8 @@ package com.nemi.report.model.request;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.nemi.constant.CurrencyCodeEnum;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
@@ -24,10 +26,13 @@ public class ReportSummaryRequest {
     private LocalDate endDate;
 
     @NotNull
-    private Integer page;
+    @Min(0)
+    private Integer page = 0;
 
     @NotNull
-    private Integer size;
+    @Min(1)
+    @Max(100)
+    private Integer size = 10;
 
     @NotNull
     @Size(min = 1)
