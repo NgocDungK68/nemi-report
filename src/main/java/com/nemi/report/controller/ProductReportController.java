@@ -23,26 +23,19 @@ public class ProductReportController {
     //    @RequirePermission("REPORTING.PRODUCT_REPORT.VIEW")
     private final ProductChartService productChartService;
 
-    @PostMapping("/summary")
+    @PostMapping
     public ResponseEntity<ProductSummaryResponse> getProductSummary(@Valid @RequestBody ProductSummaryRequest request) {
-        // TODO: Implement service call
-        // ProductSummaryResponse response = productSummaryService.getProductSummary(request);
 
-        // Mock
         ProductSummaryResponse response = productSumaryService.getProductSumary(request, null);
         return ResponseEntity.ok(response);
     }
 
 //    @RequirePermission("REPORTING.PRODUCT_REPORT.VIEW")
-    @PostMapping("summary/{productId}")
+    @PostMapping("/{productId}")
     public ResponseEntity<ProductSummaryResponse> getProductSummary(
             @PathVariable(name = "productId") String productId,
             @RequestBody ProductSummaryRequest request
     ) {
-        // TODO: Implement service call
-        // ProductDailyResponse response = productSummaryService.getProductDaily(productId, request);
-
-        // Mock
         ProductSummaryResponse response = productSumaryService.getProductSumary(request, productId);
         return ResponseEntity.ok(response);
     }

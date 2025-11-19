@@ -52,7 +52,6 @@ public class ProductSumaryServiceImpl implements ProductSumaryService {
         LinkedHashSet<OrderParameter> orderParameters = new LinkedHashSet<>();
         request.getColumns().forEach(column -> {
             ColumnConfig columnConfig = productConfig.getColumnByCode(column.getCode());
-// da dc
             if (columnConfig != null) {
                 // Exclude columns that already in the search
                 if (!excludeColumns.contains(columnConfig.getCode())) {
