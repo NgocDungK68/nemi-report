@@ -32,7 +32,6 @@ public enum OrderStatus {
         return List.of(
                 OrderStatus.NEW.getCode(),
                 OrderStatus.PROCESSING.getCode(),
-                OrderStatus.READY_TO_SHIP.getCode(),
                 OrderStatus.SHIPPING.getCode(),
                 OrderStatus.READY_TO_SHIP.getCode(),
                 OrderStatus.DELIVERED.getCode()
