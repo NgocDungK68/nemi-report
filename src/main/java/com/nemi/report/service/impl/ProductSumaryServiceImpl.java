@@ -128,10 +128,10 @@ public class ProductSumaryServiceImpl implements ProductSumaryService {
                             extraData.put(key, n);
                         } else if (matchColumn.getType().equals(ColumnDataType.TIMESTAMP)) {
                             if (value instanceof Timestamp ts) {
-                                extraData.put(key, convertInstantToString(ts.toInstant(), matchColumn));
+                                extraData.put(key, convertInstantToString(ts.toInstant()));
 
                             } else if (value instanceof Instant i) {
-                                extraData.put(key, convertInstantToString(i, matchColumn));
+                                extraData.put(key, convertInstantToString(i));
 
                             } else {
                                 extraData.put(key, null);
@@ -171,12 +171,9 @@ public class ProductSumaryServiceImpl implements ProductSumaryService {
     }
 
 
-    private String convertInstantToString(Instant instant, ColumnConfig column) {
-        boolean isEn = LanguageChecker.isEn(httpServletRequest);
+    private String convertInstantToString(Instant instant) {
         if (instant != null && instant.getEpochSecond() >= 0) {
             return DateUtils.instantToTimeString(instant);
-        } else if (StringUtils.equals(column.getCode(), "end_time") || StringUtils.equals(column.getCode(), "ad_end_time")) {
-            return isEn ? "Is going on" : "Đang diễn ra";
         }
         return null;
     }

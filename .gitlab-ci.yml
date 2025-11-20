@@ -1,11 +1,11 @@
 image:
   name: docker:25.0
-  pull_policy: always  # ← Force pull mỗi lần, không dùng cache
+
 
 services:
   - name: docker:25.0-dind
     alias: docker
-    pull_policy: always  # ← Force pull service image
+
 
 variables:
   AWS_DEFAULT_REGION: $AWS_REGION
