@@ -2,6 +2,7 @@ package com.nemi.report.util;
 
 import org.apache.commons.lang3.ObjectUtils;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.temporal.ChronoUnit;
@@ -22,5 +23,12 @@ public class DateUtils {
             throw new IllegalArgumentException("Start date and end date must not be null");
         }
         return (int) ChronoUnit.DAYS.between(startDate, endDate) + 1;
+    }
+
+    public static String convertInstantToString(Instant instant) {
+        if (instant != null && instant.getEpochSecond() >= 0) {
+            return com.nemi.util.DateUtils.instantToTimeString(instant);
+        }
+        return null;
     }
 }

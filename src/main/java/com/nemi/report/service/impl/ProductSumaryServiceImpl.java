@@ -14,7 +14,6 @@ import com.nemi.report.repository.ProductCustomRepository;
 import com.nemi.report.service.ProductSumaryService;
 import com.nemi.util.ClaimUtil;
 import com.nemi.util.DateUtils;
-import com.nemi.util.LanguageChecker;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -32,6 +31,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+
+import static com.nemi.report.util.DateUtils.convertInstantToString;
 
 @Service
 @RequiredArgsConstructor
@@ -144,7 +145,8 @@ public class ProductSumaryServiceImpl implements ProductSumaryService {
             });
 
             if (columns.stream().anyMatch(c -> StringUtils.equals(c.getCode(), ReportConstants.REPORT_DATE_START))) {
-                extraData.put(ReportConstants.REPORT_DATE_START, DateUtils.dateToString(start));
+                extraData.put(ReportConstants.REPORT_DATE_START, DateUtils
+                        .dateToString(start));
             }
             if (columns.stream().anyMatch(c -> StringUtils.equals(c.getCode(), ReportConstants.REPORT_DATE_END))) {
                 extraData.put(ReportConstants.REPORT_DATE_END, DateUtils.dateToString(end));
@@ -168,14 +170,6 @@ public class ProductSumaryServiceImpl implements ProductSumaryService {
         response.setSummary(summary);
 
         return response;
-    }
-
-
-    private String convertInstantToString(Instant instant) {
-        if (instant != null && instant.getEpochSecond() >= 0) {
-            return DateUtils.instantToTimeString(instant);
-        }
-        return null;
     }
 
 
