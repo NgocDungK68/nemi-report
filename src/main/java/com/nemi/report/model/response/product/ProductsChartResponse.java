@@ -14,7 +14,7 @@ public class ProductsChartResponse {
     @JsonProperty("totalElements")
     private Integer totalElements;
 
-    @JsonProperty("userData")
+    @JsonProperty("productData")
     private List<ProductData> productData;
 
     @JsonProperty("summary")

@@ -27,7 +27,7 @@ public class ProductChartServiceImpl implements ProductChartService {
     private final ProductConfig productConfig;
     private final ProductCustomRepository productCustomRepository;
     private final ClaimUtil claimUtil;
-    private final ProductSumaryServiceImpl productSummaryService;
+    private final ProductSummaryServiceImpl productSummaryService;
 
     @Override
     public ProductsChartResponse getProductsChart(ReportChartRequest request) {

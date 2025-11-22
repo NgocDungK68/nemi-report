@@ -10,8 +10,12 @@ public final class ReportConstants {
     public static final String PRODUCT_REPORT = "PRODUCT_REPORT";
 
     public static final String REPORT_DATE_START = "report_date_start";
-    public static final String REPORT_DATE_END = "reportDateEnd";
+    public static final String REPORT_DATE_END = "report_date_end";
 
     public static final String TOTAL_PRODUCT = "total_products";
 
+    public static final String PRODUCT_ID = "product_id";
+    public static final String PRODUCT_NAME = "name";
+    public static final String PRODUCT_IMAGE = "images";
+    public static final String REPORT_DATE = "created_at";
 }

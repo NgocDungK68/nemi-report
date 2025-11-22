@@ -98,7 +98,6 @@ public class QueryResolver {
     }
 
     public static String getColumnMapping(ColumnConfig column) {
-        String mapping = column.getMapping();
         return column.getMapping();
     }
 }
