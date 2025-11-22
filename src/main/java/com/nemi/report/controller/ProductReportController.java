@@ -1,13 +1,13 @@
 package com.nemi.report.controller;
 
-import com.nemi.annotation.RequirePermission;
 import com.nemi.report.model.request.ReportChartRequest;
 import com.nemi.report.model.request.product.ProductSummaryRequest;
 import com.nemi.report.model.response.product.ProductChartResponse;
+import com.nemi.report.model.response.product.ProductDailyResponse;
 import com.nemi.report.model.response.product.ProductSummaryResponse;
 import com.nemi.report.model.response.product.ProductsChartResponse;
 import com.nemi.report.service.ProductChartService;
-import com.nemi.report.service.ProductSumaryService;
+import com.nemi.report.service.ProductSummaryService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class ProductReportController {
 
-    private final ProductSumaryService productSumaryService;
+    private final ProductSummaryService productSummaryService;
 
     //    @RequirePermission("REPORTING.PRODUCT_REPORT.VIEW")
     private final ProductChartService productChartService;
@@ -26,17 +26,17 @@ public class ProductReportController {
     @PostMapping
     public ResponseEntity<ProductSummaryResponse> getProductSummary(@Valid @RequestBody ProductSummaryRequest request) {
 
-        ProductSummaryResponse response = productSumaryService.getProductSumary(request, null);
+        ProductSummaryResponse response = productSummaryService.getProductSummary(request);
         return ResponseEntity.ok(response);
     }
 
 //    @RequirePermission("REPORTING.PRODUCT_REPORT.VIEW")
     @PostMapping("/{productId}")
-    public ResponseEntity<ProductSummaryResponse> getProductSummary(
+    public ResponseEntity<ProductDailyResponse> getProductSummary(
             @PathVariable(name = "productId") String productId,
             @RequestBody ProductSummaryRequest request
     ) {
-        ProductSummaryResponse response = productSumaryService.getProductSumary(request, productId);
+        ProductDailyResponse response = productSummaryService.getProductDaily(request, productId);
         return ResponseEntity.ok(response);
     }
 

@@ -33,9 +33,9 @@ import java.util.stream.Collectors;
 public class ProductCustomRepository {
     private final EntityManager em;
 
-    private static final String BASE_WHERE_CLAUSE = "where p.department_id = :department and p.created_at <= :endDate and p.created_at >= :startDate";
+    private static final String BASE_WHERE_CLAUSE = "where o.department_id = :department and oi.created_at <= :endDate and oi.created_at >= :startDate";
 
-    private static final String PRODUCT_WHERE_CLAUSE = "where p.department_id = :department and p.created_at <= :endDate and p.created_at >= :startDate and p.product_id = :productId";
+    private static final String PRODUCT_WHERE_CLAUSE = "where o.department_id = :department and oi.created_at <= :endDate and oi.created_at >= :startDate and p.product_id = :productId";
 
     private String buildFromClause(List<ProductSource> joinSources) {
         StringBuilder sql = new StringBuilder(" FROM product_manager.products p ");
@@ -63,11 +63,15 @@ public class ProductCustomRepository {
     }
 
 
-    @SuppressWarnings({"unchecked"}) // viewcolun
-    public List<Map<String, Object>> search(Set<ColumnConfig> columns, Set<QueryParameter> queryParameters, Set<OrderParameter> orderParameters, LocalDate startDate, LocalDate endDate, PageRequest pageRequest, String departmentId, String producId) {
+    @SuppressWarnings({"unchecked"})
+    public List<Map<String, Object>> search(Set<ColumnConfig> columns, Set<QueryParameter> queryParameters, Set<OrderParameter> orderParameters, LocalDate startDate, LocalDate endDate, PageRequest pageRequest, String departmentId, String productId) {
         try {
             StringBuilder sql = new StringBuilder();
-            sql.append("select * from (select p.product_id , p.name, p.status,p.created_at ");
+            sql.append("select * from (select p.product_id, p.name, p.status ");
+
+            if (!StringUtils.isEmpty(productId)) {
+                sql.append(", TO_CHAR(oi.created_at, 'YYYY-MM-DD') as created_at ");
+            }
 
 //            if (adsTab.equals(AdsTab.AD_ACCOUNT)) {
 //                sql.append(", a.account_status as status_account, a.currency as currency_default ");
@@ -77,12 +81,12 @@ public class ProductCustomRepository {
 //                sql.append(", p.status, MAX(ac.account_status) as status_account, MAX(ac.currency) as currency_default, a.campaign ->> 'objective' as objective_default ");
 //            }
 
-            buildSelectAndFromAndWhereClause(sql, columns, queryParameters, producId);
+            buildSelectAndFromAndWhereClause(sql, columns, queryParameters, productId);
 
             sql.append(" order by ");
 
             // append order by clause
-            if (ObjectUtils.isEmpty(orderParameters)) {
+            if (ObjectUtils.isEmpty(orderParameters) || !StringUtils.isEmpty(productId)) {
                 sql.append("s.created_at desc");
             } else {
                 String orderByClause = orderParameters.stream()
@@ -91,7 +95,7 @@ public class ProductCustomRepository {
                 sql.append(orderByClause);
             }
 
-            Query query = buildQuery(sql, departmentId, startDate, endDate, producId);
+            Query query = buildQuery(sql, departmentId, startDate, endDate, productId);
 
             if (ObjectUtils.isNotEmpty(pageRequest)) {
                 query.setFirstResult(pageRequest.getPageNumber() * pageRequest.getPageSize());
@@ -140,7 +144,7 @@ public class ProductCustomRepository {
             if (ObjectUtils.isNotEmpty(pageRequest)) {
                 totalPages = (int) Math.ceil(count / (double) pageRequest.getPageSize());
             }
-            return new PageCountData(count, totalPages, null);
+            return new PageCountData(count, totalPages);
         } catch (Exception e) {
             log.error("Error in count", e);
             throw new RuntimeException(e);
@@ -184,7 +188,12 @@ public class ProductCustomRepository {
             sql.append(QueryResolver.buildSqlCondition(qM));
         });
 
-        sql.append(" GROUP BY p.product_id, p.name, p.status,p.pos_id,p.created_at) s ");
+        // GROUP BY
+        if (StringUtils.isEmpty(productId)) {
+            sql.append(" GROUP BY p.product_id, p.pos_id) s ");
+        } else {
+            sql.append(" GROUP BY p.product_id, p.pos_id, TO_CHAR(oi.created_at, 'YYYY-MM-DD')) s ");
+        }
 
         // append where clause in insight table
         if (!queryInInsights.isEmpty())

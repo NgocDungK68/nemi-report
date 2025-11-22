@@ -2,7 +2,10 @@ package com.nemi.report.model.response.product;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.nemi.report.entity.ProductEntity;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.util.List;
 import java.util.Map;
@@ -31,6 +34,9 @@ public class ProductSummaryResponse {
     }
 
     @Data
+    @Builder
+    @AllArgsConstructor
+    @NoArgsConstructor
     public static class ProductData {
         @JsonProperty("id")
         private String id;
@@ -52,5 +58,4 @@ public class ProductSummaryResponse {
         }).toList();
 
     }
-
 }
