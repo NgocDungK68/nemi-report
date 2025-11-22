@@ -33,6 +33,8 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.*;
 
+import static com.nemi.report.util.DateUtils.convertInstantToString;
+
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -186,27 +188,6 @@ public class ProductSummaryServiceImpl implements ProductSummaryService {
         return response;
     }
 
-
-    private String convertInstantToString(Instant instant) {
-        if (instant != null && instant.getEpochSecond() >= 0) {
-            return DateUtils.instantToTimeString(instant);
-        }
-        return null;
-    }
-
-
-    private LinkedHashSet<QueryParameter> convertToQueryParameters(ProductSummaryRequest request) {
-        LinkedHashSet<QueryParameter> queryParameters = new LinkedHashSet<>();
-
-        request.getFilters().forEach(filter -> {
-            ColumnConfig columnConfig = productConfig.getColumnByCode(filter.getCode());
-            if (columnConfig != null) {
-                queryParameters.add(new QueryParameter(columnConfig, filter.getType(), new ArrayList<>(filter.getValue())));
-            }
-        });
-        return queryParameters;
-    }
-
     private LinkedHashSet<QueryParameter> convertToQueryParameters(List<FilterRequest> filters) {
         LinkedHashSet<QueryParameter> queryParameters = new LinkedHashSet<>();
 
@@ -220,12 +201,12 @@ public class ProductSummaryServiceImpl implements ProductSummaryService {
     }
 
     private List<ProductReportModel> fetchProductReportModels(CurrencyCodeEnum currency,
-                                                             LocalDate startDate,
-                                                             LocalDate endDate,
-                                                             List<ColumnRequest> columns,
-                                                             List<FilterRequest> filters,
-                                                             PageRequest pageRequest,
-                                                             String productId) {
+                                                              LocalDate startDate,
+                                                              LocalDate endDate,
+                                                              List<ColumnRequest> columns,
+                                                              List<FilterRequest> filters,
+                                                              PageRequest pageRequest,
+                                                              String productId) {
         LinkedHashSet<ColumnConfig> viewColumns = new LinkedHashSet<>();
         LinkedHashSet<ColumnConfig> searchColumns = new LinkedHashSet<>();
         LinkedHashSet<OrderParameter> orderParameters = new LinkedHashSet<>();
