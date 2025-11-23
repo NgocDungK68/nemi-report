@@ -14,7 +14,7 @@ import com.nemi.report.model.config.ColumnConfig;
 import com.nemi.report.model.pojo.ProductReportModel;
 import com.nemi.report.model.request.ColumnRequest;
 import com.nemi.report.model.request.FilterRequest;
-import com.nemi.report.model.request.product.ProductSummaryRequest;
+import com.nemi.report.model.request.ReportSummaryRequest;
 import com.nemi.report.model.response.PageCountData;
 import com.nemi.report.model.response.product.ProductDailyResponse;
 import com.nemi.report.model.response.product.ProductSummaryResponse;
@@ -46,7 +46,7 @@ public class ProductSummaryServiceImpl implements ProductSummaryService {
     private static final List<String> excludeColumns = List.of("product_id", "product_name", "status", "created_time");
 
     @Override
-    public ProductSummaryResponse getProductSummary(ProductSummaryRequest request) {
+    public ProductSummaryResponse getProductSummary(ReportSummaryRequest request) {
         try {
             PageRequest pageRequest = PageRequest.of(request.getPage(), request.getSize());
 
@@ -71,9 +71,19 @@ public class ProductSummaryServiceImpl implements ProductSummaryService {
                     null
             );
 
+            List<Map<String, Object>> summary = productCustomRepository.summary(
+                    getColumnConfigs(request),
+                    convertToQueryParameters(request.getFilters()),
+                    request.getStartDate(),
+                    request.getEndDate(),
+                    claimUtil.getDepartmentId(),
+                    null
+            );
+
             ProductSummaryResponse response = buildProductSummaryResponse(productReportModels);
             response.setTotalElements(pageCountData.getTotalElements());
             response.setTotalPages(pageCountData.getTotalPages());
+            response.setSummary(summary.get(0));
 
             return response;
         } catch (Exception e) {
@@ -83,7 +93,7 @@ public class ProductSummaryServiceImpl implements ProductSummaryService {
     }
 
     @Override
-    public ProductDailyResponse getProductDaily(ProductSummaryRequest request, String productId) {
+    public ProductDailyResponse getProductDaily(ReportSummaryRequest request, String productId) {
         try {
             PageRequest pageRequest = PageRequest.of(request.getPage(), request.getSize());
 
@@ -334,5 +344,31 @@ public class ProductSummaryServiceImpl implements ProductSummaryService {
 
         response.setData(dataItems);
         return response;
+    }
+
+    private Set<ColumnConfig> getColumnConfigs(ReportSummaryRequest request) {
+        LinkedHashSet<ColumnConfig> columns = new LinkedHashSet<>();
+
+        request.getColumns().forEach(column -> {
+            ColumnConfig columnConfig = productConfig.getColumnByCode(column.getCode());
+            if (columnConfig != null) {
+                // Exclude columns that already in the search
+                if (!excludeColumns.contains(columnConfig.getCode())) {
+                    // if column has sub columns, add them to search columns
+                    if (Objects.nonNull(columnConfig.getSubColumns())) {
+                        columnConfig.getSubColumns().forEach(subColumn -> {
+                            ColumnConfig subColumnConfig = productConfig.getColumnByCode(subColumn);
+                            if (subColumnConfig != null) {
+                                columns.add(subColumnConfig);
+                            }
+                        });
+                    } else if (!columnConfig.getSource().equals(ProductSource.VIEW_ONLY)) {
+                        columns.add(columnConfig);
+                    }
+                }
+            }
+        });
+
+        return columns;
     }
 }

@@ -69,7 +69,7 @@ public class ProductCustomRepository {
             StringBuilder sql = new StringBuilder();
             sql.append("select * from (select p.product_id, p.name, p.status ");
 
-            if (!StringUtils.isEmpty(productId)) {
+            if (ObjectUtils.isNotEmpty(productId)) {
                 sql.append(", TO_CHAR(oi.created_at, 'YYYY-MM-DD') as created_at ");
             }
 
@@ -137,7 +137,7 @@ public class ProductCustomRepository {
 
             Query query = buildQuery(sql, departmentId, startDate, endDate, productId);
 
-            log.debug("SQL search: {}", sql);
+            log.debug("SQL count: {}", sql);
 
             long count = ((Number) query.getSingleResult()).longValue();
             int totalPages = 1;
@@ -151,6 +151,50 @@ public class ProductCustomRepository {
         }
     }
 
+    @SuppressWarnings({"unchecked"})
+    public List<Map<String, Object>> summary(Set<ColumnConfig> columns, Set<QueryParameter> queryParameters, LocalDate startDate, LocalDate endDate, String departmentId, String productId) {
+        try {
+            StringBuilder sql = new StringBuilder();
+            sql.append("select p.product_id ");
+
+            // build select SUM or AVG
+            StringBuilder summarySql = new StringBuilder();
+            summarySql.append("select ");
+
+            if (ObjectUtils.isNotEmpty(productId)) {
+                sql.append(", TO_CHAR(oi.created_at, 'YYYY-MM-DD') as created_at ");
+                summarySql.append(", s.created_at ");
+            }
+
+//            if (ObjectUtils.isNotEmpty(columns)) {
+//                summarySql.append(", ");
+//            }
+
+            // append from and where clause
+            buildSelectAndFromAndWhereClause(sql, columns, queryParameters, productId);
+
+            String sumCols = columns.stream()
+                    .map(col -> {
+                        if (col.getRequiredForAvg() != null) {
+                            return col.getAvgFormula() + String.format(" as \"%s\" ", col.getCode());
+                        }
+                        return String.format(" %s(s.%s) as \"%s\" ", col.getSummaryType().name(), col.getCode(), col.getCode());
+                    })
+                    .collect(Collectors.joining(","));
+            summarySql.append(sumCols);
+            summarySql.append(String.format(" from (%s ", sql));
+//            summarySql.append("group by s.product_id");
+
+            Query query = buildQuery(summarySql, departmentId, startDate, endDate, productId);
+            setResultMapping(query);
+
+            log.debug("SQL summary: {}", summarySql);
+            return (List<Map<String, Object>>) query.getResultList();
+        } catch (Exception e) {
+            log.error("Error in summary", e);
+            throw new RuntimeException(e);
+        }
+    }
 
     private Query buildQuery(StringBuilder sqlBuilder, String departmentId, LocalDate startDate, LocalDate endDate, String productId) {
         Query query = em.createNativeQuery(sqlBuilder.toString());
