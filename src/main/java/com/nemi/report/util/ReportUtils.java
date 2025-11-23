@@ -6,6 +6,8 @@ import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.List;
+import java.util.Objects;
 
 @Component
 @RequiredArgsConstructor
@@ -30,9 +32,37 @@ public class ReportUtils {
         // Nếu kỳ trước khác 0 => tính theo công thức
         BigDecimal diff = current.subtract(previous);
         BigDecimal percent = diff
-                .divide(previous, RoundingMode.HALF_UP)
+                .divide(previous, scale + 2, RoundingMode.HALF_UP)
                 .multiply(BigDecimal.valueOf(100));
 
         return percent.setScale(scale, RoundingMode.HALF_UP);  // Làm tròn 2 chữ số sau dấu phẩy
+    }
+
+    public static BigDecimal calculatePercentage(BigDecimal value, BigDecimal total, int scale) {
+        if (ObjectUtils.isEmpty(value) || ObjectUtils.isEmpty(total) || total.compareTo(BigDecimal.ZERO) == 0) {
+            throw new RuntimeException("Calculate percentage error");
+        }
+
+        return value
+                .divide(total, scale + 2, RoundingMode.HALF_UP)
+                .multiply(BigDecimal.valueOf(100))
+                .setScale(scale, RoundingMode.HALF_UP);
+    }
+
+    public static BigDecimal sum(List<? extends Number> listNumber) {
+        return listNumber.stream()
+                .filter(Objects::nonNull)
+                .map(num -> new BigDecimal(num.toString()))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    public static BigDecimal convertToBigDecimal(Object object) {
+        BigDecimal value = BigDecimal.ZERO;
+
+        if (object instanceof Number number) {
+            value = new BigDecimal(number.toString());
+        }
+
+        return value;
     }
 }

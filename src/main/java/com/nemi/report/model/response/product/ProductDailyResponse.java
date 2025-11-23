@@ -1,12 +1,14 @@
 package com.nemi.report.model.response.product;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.Builder;
 import lombok.Data;
 
 import java.util.List;
 import java.util.Map;
 
 @Data
+@Builder
 public class ProductDailyResponse {
     @JsonProperty("totalElements")
     private Long totalElements;

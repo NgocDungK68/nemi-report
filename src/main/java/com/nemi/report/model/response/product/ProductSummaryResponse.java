@@ -11,6 +11,9 @@ import java.util.List;
 import java.util.Map;
 
 @Data
+@Builder
+@AllArgsConstructor
+@NoArgsConstructor
 public class ProductSummaryResponse {
     @JsonProperty("totalElements")
     private Long totalElements;
