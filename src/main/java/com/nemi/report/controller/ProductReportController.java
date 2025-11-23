@@ -1,7 +1,7 @@
 package com.nemi.report.controller;
 
 import com.nemi.report.model.request.ReportChartRequest;
-import com.nemi.report.model.request.product.ProductSummaryRequest;
+import com.nemi.report.model.request.ReportSummaryRequest;
 import com.nemi.report.model.response.product.ProductChartResponse;
 import com.nemi.report.model.response.product.ProductDailyResponse;
 import com.nemi.report.model.response.product.ProductSummaryResponse;
@@ -24,7 +24,7 @@ public class ProductReportController {
     private final ProductChartService productChartService;
 
     @PostMapping
-    public ResponseEntity<ProductSummaryResponse> getProductSummary(@Valid @RequestBody ProductSummaryRequest request) {
+    public ResponseEntity<ProductSummaryResponse> getProductSummary(@Valid @RequestBody ReportSummaryRequest request) {
 
         ProductSummaryResponse response = productSummaryService.getProductSummary(request);
         return ResponseEntity.ok(response);
@@ -34,7 +34,7 @@ public class ProductReportController {
     @PostMapping("/{productId}")
     public ResponseEntity<ProductDailyResponse> getProductSummary(
             @PathVariable(name = "productId") String productId,
-            @RequestBody ProductSummaryRequest request
+            @RequestBody ReportSummaryRequest request
     ) {
         ProductDailyResponse response = productSummaryService.getProductDaily(request, productId);
         return ResponseEntity.ok(response);

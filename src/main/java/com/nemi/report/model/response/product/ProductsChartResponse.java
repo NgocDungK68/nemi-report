@@ -1,8 +1,10 @@
 package com.nemi.report.model.response.product;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -22,6 +24,8 @@ public class ProductsChartResponse {
 
     @Data
     @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class ProductData {
         @JsonProperty("product")
         private Product product;

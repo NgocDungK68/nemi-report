@@ -93,7 +93,7 @@ public class OverviewReportController {
         return ResponseEntity.ok(response);
     }
 
-    @RequirePermission("REPORTING.OVERVIEW_REPORT.VIEW")
+//    @RequirePermission("REPORTING.OVERVIEW_REPORT.VIEW")
     @GetMapping("/monthly-target")
     public ResponseEntity<MonthlyTargetResponse> getMonthlyTarget(
             @RequestParam("currency") Currency currency) {
