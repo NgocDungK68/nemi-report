@@ -19,6 +19,7 @@ import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -86,7 +87,10 @@ public class ProductCustomRepository {
             sql.append(" order by ");
 
             // append order by clause
-            if (ObjectUtils.isEmpty(orderParameters) || !StringUtils.isEmpty(productId)) {
+            ColumnConfig firstColumn = columns.stream().findFirst().orElse(null);
+            if (ObjectUtils.isEmpty(pageRequest) && ObjectUtils.isNotEmpty(firstColumn)) {
+                sql.append(String.format("s.%s desc", firstColumn.getCode()));
+            } else if (ObjectUtils.isEmpty(orderParameters) || !StringUtils.isEmpty(productId)) {
                 sql.append("s.created_at desc");
             } else {
                 String orderByClause = orderParameters.stream()
@@ -95,12 +99,16 @@ public class ProductCustomRepository {
                 sql.append(orderByClause);
             }
 
+            // build query
             Query query = buildQuery(sql, departmentId, startDate, endDate, productId);
 
             if (ObjectUtils.isNotEmpty(pageRequest)) {
                 query.setFirstResult(pageRequest.getPageNumber() * pageRequest.getPageSize());
                 query.setMaxResults(pageRequest.getPageSize());
+            } else {
+                query.setMaxResults(10);   // LIMIT 10
             }
+
             setResultMapping(query);
 
             log.debug("SQL search: {}", sql);
@@ -152,7 +160,7 @@ public class ProductCustomRepository {
     }
 
     @SuppressWarnings({"unchecked"})
-    public List<Map<String, Object>> summary(Set<ColumnConfig> columns, Set<QueryParameter> queryParameters, LocalDate startDate, LocalDate endDate, String departmentId, String productId) {
+    public Map<String, Object> summary(Set<ColumnConfig> columns, Set<QueryParameter> queryParameters, LocalDate startDate, LocalDate endDate, String departmentId, String productId) {
         try {
             StringBuilder sql = new StringBuilder();
             sql.append("select p.product_id ");
@@ -163,9 +171,10 @@ public class ProductCustomRepository {
 
             if (ObjectUtils.isNotEmpty(productId)) {
                 sql.append(", TO_CHAR(oi.created_at, 'YYYY-MM-DD') as created_at ");
-                summarySql.append(", s.created_at ");
+                summarySql.append("s.created_at, ");
             }
 
+            // TODO: fix summary code
 //            if (ObjectUtils.isNotEmpty(columns)) {
 //                summarySql.append(", ");
 //            }
@@ -184,12 +193,19 @@ public class ProductCustomRepository {
             summarySql.append(sumCols);
             summarySql.append(String.format(" from (%s ", sql));
 //            summarySql.append("group by s.product_id");
+            if (ObjectUtils.isNotEmpty(productId)) {
+                summarySql.append(" group by s.created_at"); // bổ sung GROUP BY
+            }
 
             Query query = buildQuery(summarySql, departmentId, startDate, endDate, productId);
             setResultMapping(query);
 
             log.debug("SQL summary: {}", summarySql);
-            return (List<Map<String, Object>>) query.getResultList();
+            List<Map<String, Object>> summary = query.getResultList();
+            if (summary.isEmpty()) {
+                return Collections.emptyMap();  // hoặc null tùy bạn
+            }
+            return summary.get(0);
         } catch (Exception e) {
             log.error("Error in summary", e);
             throw new RuntimeException(e);

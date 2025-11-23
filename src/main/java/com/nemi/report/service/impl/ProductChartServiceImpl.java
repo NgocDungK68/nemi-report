@@ -1,187 +1,196 @@
 package com.nemi.report.service.impl;
 
-import com.nemi.report.configuration.ProductConfig;
-import com.nemi.report.model.config.ColumnConfig;
+import com.nemi.exception.TechnicalException;
+import com.nemi.exception.pojo.AlertMessages;
+import com.nemi.report.configuration.ReportConfig;
+import com.nemi.report.exception.TechnicalAlertCode;
+import com.nemi.report.model.pojo.ProductReportModel;
+import com.nemi.report.model.request.ColumnRequest;
 import com.nemi.report.model.request.ReportChartRequest;
 import com.nemi.report.model.response.product.ProductChartResponse;
-import com.nemi.report.model.response.product.ProductSummaryResponse;
 import com.nemi.report.model.response.product.ProductsChartResponse;
-import com.nemi.report.repository.ProductCustomRepository;
 import com.nemi.report.service.ProductChartService;
-import com.nemi.report.util.DateUtils;
-import com.nemi.util.ClaimUtil;
+import com.nemi.report.util.ReportUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.ObjectUtils;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
-import java.time.LocalDate;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class ProductChartServiceImpl implements ProductChartService {
-    private final ProductConfig productConfig;
-    private final ProductCustomRepository productCustomRepository;
-    private final ClaimUtil claimUtil;
     private final ProductSummaryServiceImpl productSummaryService;
+    private final ReportConfig reportConfig;
 
     @Override
     public ProductsChartResponse getProductsChart(ReportChartRequest request) {
-        String code = request.getChartData().getCode();
-        ProductSummaryResponse summaryResponse = getSummaryResponse(
-                code,
-                request.getStartDate(),
-                request.getEndDate(),
-                null
-        );
+        try {
+            String code = request.getChartData().getCode();
+            List<ColumnRequest> columnRequest = buildColumnRequest(code);
 
-        // summary data
-        ProductsChartResponse.Summary summary = getSummary(summaryResponse, code);
+            // fetch ProductReportModel
+            List<ProductReportModel> productReportModels = productSummaryService.fetchProductReportModels(
+                    request.getCurrency(),
+                    request.getStartDate(),
+                    request.getEndDate(),
+                    columnRequest,
+                    null,
+                    null,
+                    null
+            );
 
-        List<ProductsChartResponse.ProductData> productDataList = new ArrayList<>();
-        int totalElements = 0;
-        for (ProductSummaryResponse.DataItem dataItem : summaryResponse.getData()) {
-            productDataList.add(getProductData(dataItem, summary, code));
-            totalElements += 1;
+            // query summary
+            Map<String, Object> summary = productSummaryService.getSummary(
+                    columnRequest,
+                    null,
+                    request.getStartDate(),
+                    request.getEndDate(),
+                    null
+            );
+
+            return buildProductsChartResponse(productReportModels, summary, code);
+        } catch (Exception e) {
+            log.error("[getProductsChart] error: {}", e.getMessage(), e);
+            throw new TechnicalException(AlertMessages.alert(TechnicalAlertCode.SYSTEM_ERROR));
         }
-
-        return ProductsChartResponse.builder()
-                .totalElements(totalElements)
-                .productData(productDataList)
-                .summary(summary)
-                .build();
     }
 
     @Override
     public ProductChartResponse getProductChartByProductId(String productId, ReportChartRequest request) {
-        String code = request.getChartData().getCode();
-        LocalDate startDate = request.getStartDate();
-        LocalDate endDate = request.getEndDate();
+        try {
+            String code = request.getChartData().getCode();
+            List<ColumnRequest> columnRequest = buildColumnRequest(code);
 
-        // summary data
-        ProductSummaryResponse summaryResponse = getSummaryResponse(code, request.getStartDate(), request.getEndDate(), productId);
-        ProductsChartResponse.Summary summary = getSummary(summaryResponse, code);
+            // fetch ProductReportModel
+            List<ProductReportModel> productReportModels = productSummaryService.fetchProductReportModels(
+                    request.getCurrency(),
+                    request.getStartDate(),
+                    request.getEndDate(),
+                    columnRequest,
+                    null,
+                    null,
+                    productId
+            );
+
+            // query summary
+            Map<String, Object> summary = productSummaryService.getSummary(
+                    columnRequest,
+                    null,
+                    request.getStartDate(),
+                    request.getEndDate(),
+                    productId
+            );
+
+            return buildProductChartResponse(productReportModels, summary, code);
+        } catch (Exception e) {
+            log.error("[getProductChartByProductId] error: {}", e.getMessage(), e);
+            throw new TechnicalException(AlertMessages.alert(TechnicalAlertCode.SYSTEM_ERROR));
+        }
+    }
+
+    private List<ColumnRequest> buildColumnRequest(String code) {
+        return List.of(new ColumnRequest(code, null));
+    }
+
+    private ProductsChartResponse buildProductsChartResponse(List<ProductReportModel> productReportModels,
+                                                             Map<String, Object> summary,
+                                                             String code) {
+        BigDecimal summaryValue = sumData(productReportModels, code);
+        int scale = reportConfig.getScale().getPercent();
+
+        List<ProductsChartResponse.ProductData> productDataList = new ArrayList<>();
+        for (ProductReportModel productReportModel : productReportModels) {
+            ProductsChartResponse.ProductData productData = new ProductsChartResponse.ProductData();
+
+            // set product info
+            productData.setProduct(ProductsChartResponse.Product.builder()
+                    .id(productReportModel.getProductId())
+                    .name(productReportModel.getProductName())
+                    .build());
+
+            // set dataValue
+            Object data = productReportModel.getExtraData().getOrDefault(code, null);
+            BigDecimal value = ReportUtils.convertToBigDecimal(data);
+            BigDecimal percent = ReportUtils.calculatePercentage(value, summaryValue, scale);
+
+            productData.setData(ProductsChartResponse.DataValue.builder()
+                    .value(value)
+                    .percent(percent)
+                    .build());
+
+            // TODO: dateValues
+
+            // add to productDataList
+            productDataList.add(productData);
+        }
+
+        // build summary
+        ProductsChartResponse.Summary summaryData = buildSummaryData(summary, summaryValue, scale, code);
+
+        return ProductsChartResponse.builder()
+                .totalElements(productDataList.size())
+                .productData(productDataList)
+                .summary(summaryData)
+                .build();
+    }
+
+    private ProductChartResponse buildProductChartResponse(List<ProductReportModel> productReportModels,
+                                                           Map<String, Object> summary,
+                                                           String code) {
+        BigDecimal summaryValue = sumData(productReportModels, code);
+        int scale = reportConfig.getScale().getPercent();
 
         List<ProductChartResponse.DateData> dateDataList = new ArrayList<>();
-        for (LocalDate date = request.getStartDate(); !date.isAfter(request.getEndDate()); date = date.plusDays(1)) {
-            ProductSummaryResponse summaryResponseByDay = getSummaryResponse(code, date, date, productId);
-            List<ProductSummaryResponse.DataItem> items = summaryResponseByDay.getData();
-
-            BigDecimal value = BigDecimal.ZERO;
-            if (ObjectUtils.isNotEmpty(items)) {
-                value = toBigDecimal(items.get(0).getExtraData().get(code));
-            }
+        for (ProductReportModel productReportModel : productReportModels) {
+            // set dateData
+            Object data = productReportModel.getExtraData().getOrDefault(code, null);
+            BigDecimal value = ReportUtils.convertToBigDecimal(data);
+            BigDecimal percent = ReportUtils.calculatePercentage(value, summaryValue, scale);
 
             ProductChartResponse.DateData dateData = ProductChartResponse.DateData.builder()
                     .value(value)
-                    .percent(summary.getValue().compareTo(BigDecimal.ZERO) == 0
-                            ? BigDecimal.ZERO
-                            : value.divide(summary.getValue(), RoundingMode.HALF_UP))
+                    .percent(percent)
                     .build();
 
+            // add to dateDataList
             dateDataList.add(dateData);
         }
 
+        // build summary
+        ProductsChartResponse.Summary summaryData = buildSummaryData(summary, summaryValue, scale, code);
+
         return ProductChartResponse.builder()
-                .totalElements(DateUtils.daysBetweenInclusive(startDate, endDate))
+                .totalElements(dateDataList.size())
                 .dateData(dateDataList)
-                .summary(summary)
+                .summary(summaryData)
                 .build();
     }
 
-    private ProductSummaryResponse getSummaryResponse(String code, LocalDate startDate, LocalDate endDate, String productId) {
-        LinkedHashSet<ColumnConfig> viewColumns = new LinkedHashSet<>();
-        LinkedHashSet<ColumnConfig> searchColumns = new LinkedHashSet<>();
-
-        ColumnConfig columnConfig = productConfig.getColumnByCode(code);
-        if (ObjectUtils.isNotEmpty(columnConfig)) {
-            viewColumns.add(columnConfig);
-            if (Objects.nonNull(columnConfig.getSubColumns())) {
-                columnConfig.getSubColumns().forEach(subColumn -> {
-                    ColumnConfig subColumnConfig = productConfig.getColumnByCode(subColumn);
-                    if (ObjectUtils.isNotEmpty(subColumnConfig)) {
-                        searchColumns.add(subColumnConfig);
-                    }
-                });
-            }
-            searchColumns.add(columnConfig);
-        }
-
-        List<Map<String, Object>> data = productCustomRepository.search(new LinkedHashSet<>(searchColumns), null, null, startDate, endDate, null, claimUtil.getUserName(), productId);
-
-        return productSummaryService.getFromResultSQL(data, viewColumns, startDate, endDate, null, null);
-    }
-
-    private ProductsChartResponse.ProductData getProductData(ProductSummaryResponse.DataItem dataItem,
-                                                             ProductsChartResponse.Summary summary,
-                                                             String code) {
-        // product info
-        ProductsChartResponse.Product product = ProductsChartResponse.Product.builder()
-                .id(dataItem.getProduct().getId())
-                .name(dataItem.getProduct().getName())
-                .build();
-
-        // data
-        BigDecimal value = toBigDecimal(dataItem.getExtraData().get(code));
-        ProductsChartResponse.DataValue dataValue = ProductsChartResponse.DataValue.builder()
-                .value(value)
-                .percent(value.divide(summary.getValue(), RoundingMode.HALF_UP))
-                .build();
-
-        return ProductsChartResponse.ProductData.builder()
-                .product(product)
-                .data(dataValue)
-                .build();
-    }
-
-    private ProductsChartResponse.Summary getSummary(ProductSummaryResponse summaryResponse, String code) {
-        BigDecimal summaryValue = BigDecimal.ZERO;
-        for (ProductSummaryResponse.DataItem dataItem : summaryResponse.getData()) {
-            summaryValue = summaryValue.add(toBigDecimal(dataItem.getExtraData().get(code)));
-
-            // TODO: summary.percent
-        }
+    private ProductsChartResponse.Summary buildSummaryData(Map<String, Object> summary, BigDecimal summaryValue, int scale, String code) {
+        Object summaryAll = summary.getOrDefault(code, null);
+        BigDecimal summaryAllValue = ReportUtils.convertToBigDecimal(summaryAll);
+        BigDecimal summaryPercent = ReportUtils.calculatePercentage(summaryValue, summaryAllValue, scale);
 
         return ProductsChartResponse.Summary.builder()
                 .value(summaryValue)
+                .percent(summaryPercent)
                 .build();
     }
 
-    /**
-     * Chuyển Object sang BigDecimal an toàn.
-     * Hỗ trợ Long, Integer, Double, Float, BigDecimal, String.
-     * Trả về null nếu object là null hoặc không chuyển được.
-     */
-    private BigDecimal toBigDecimal(Object valueObj) {
-        if (valueObj == null) return null;
+    private BigDecimal sumData(List<ProductReportModel> productReportModels, String code) {
+        List<Number> listData = new ArrayList<>();
+        productReportModels.forEach(productReportModel -> {
+            Object value = productReportModel.getExtraData().get(code);
+            if (value instanceof Number number) {
+                listData.add(number);
+            }
+        });
 
-        if (valueObj instanceof BigDecimal) {
-            return (BigDecimal) valueObj;
-        } else if (valueObj instanceof Long) {
-            return BigDecimal.valueOf((Long) valueObj);
-        } else if (valueObj instanceof Integer) {
-            return BigDecimal.valueOf((Integer) valueObj);
-        } else if (valueObj instanceof Double) {
-            return BigDecimal.valueOf((Double) valueObj);
-        } else if (valueObj instanceof Float) {
-            return BigDecimal.valueOf(((Float) valueObj).doubleValue());
-        } else if (valueObj instanceof String) {
-            try {
-                return new BigDecimal((String) valueObj);
-            } catch (NumberFormatException e) {
-                return null;
-            }
-        } else {
-            try {
-                return new BigDecimal(valueObj.toString());
-            } catch (NumberFormatException e) {
-                return null;
-            }
-        }
+        return ReportUtils.sum(listData);
     }
-
 }
