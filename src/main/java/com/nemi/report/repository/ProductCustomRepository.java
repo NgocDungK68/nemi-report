@@ -18,7 +18,6 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
-import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -33,11 +32,10 @@ import java.util.stream.Collectors;
 
 public class ProductCustomRepository {
     private final EntityManager em;
-    private final ProductRepository productRepository;
 
-    private static final String BASE_WHERE_CLAUSE = "where p.created_by = :createdBy and p.created_at <= :endDate and p.created_at >= :startDate";
+    private static final String BASE_WHERE_CLAUSE = "where o.department_id = :department and oi.created_at <= :endDate and oi.created_at >= :startDate";
 
-    private static final String PRODUCT_WHERE_CLAUSE = "where p.created_by = :createdBy and p.created_at <= :endDate and p.created_at >= :startDate and p.product_id = :productId";
+    private static final String PRODUCT_WHERE_CLAUSE = "where o.department_id = :department and oi.created_at <= :endDate and oi.created_at >= :startDate and p.product_id = :productId";
 
     private String buildFromClause(List<ProductSource> joinSources) {
         StringBuilder sql = new StringBuilder(" FROM product_manager.products p ");
@@ -65,11 +63,15 @@ public class ProductCustomRepository {
     }
 
 
-    @SuppressWarnings({"unchecked"}) // viewcolun
-    public List<Map<String, Object>> search(Set<ColumnConfig> columns, Set<QueryParameter> queryParameters, Set<OrderParameter> orderParameters, LocalDate startDate, LocalDate endDate, PageRequest pageRequest, String createdBy,String producId) {
+    @SuppressWarnings({"unchecked"})
+    public List<Map<String, Object>> search(Set<ColumnConfig> columns, Set<QueryParameter> queryParameters, Set<OrderParameter> orderParameters, LocalDate startDate, LocalDate endDate, PageRequest pageRequest, String departmentId, String productId) {
         try {
             StringBuilder sql = new StringBuilder();
-            sql.append("select * from (select p.product_id , p.name, p.status,p.created_at ");
+            sql.append("select * from (select p.product_id, p.name, p.status ");
+
+            if (!StringUtils.isEmpty(productId)) {
+                sql.append(", TO_CHAR(oi.created_at, 'YYYY-MM-DD') as created_at ");
+            }
 
 //            if (adsTab.equals(AdsTab.AD_ACCOUNT)) {
 //                sql.append(", a.account_status as status_account, a.currency as currency_default ");
@@ -79,12 +81,12 @@ public class ProductCustomRepository {
 //                sql.append(", p.status, MAX(ac.account_status) as status_account, MAX(ac.currency) as currency_default, a.campaign ->> 'objective' as objective_default ");
 //            }
 
-            buildSelectAndFromAndWhereClause(sql, columns, queryParameters,producId);
+            buildSelectAndFromAndWhereClause(sql, columns, queryParameters, productId);
 
             sql.append(" order by ");
 
             // append order by clause
-            if (ObjectUtils.isEmpty(orderParameters)) {
+            if (ObjectUtils.isEmpty(orderParameters) || !StringUtils.isEmpty(productId)) {
                 sql.append("s.created_at desc");
             } else {
                 String orderByClause = orderParameters.stream()
@@ -93,7 +95,7 @@ public class ProductCustomRepository {
                 sql.append(orderByClause);
             }
 
-            Query query = buildQuery(sql, createdBy, startDate, endDate,producId);
+            Query query = buildQuery(sql, departmentId, startDate, endDate, productId);
 
             if (ObjectUtils.isNotEmpty(pageRequest)) {
                 query.setFirstResult(pageRequest.getPageNumber() * pageRequest.getPageSize());
@@ -122,18 +124,18 @@ public class ProductCustomRepository {
                 });
     }
 
-    public PageCountData count(Set<QueryParameter> queryParameters, LocalDate startDate, LocalDate endDate, PageRequest pageRequest, String createdBy,String productId) {
+    public PageCountData count(Set<QueryParameter> queryParameters, LocalDate startDate, LocalDate endDate, PageRequest pageRequest, String departmentId, String productId) {
         try {
             StringBuilder sql = new StringBuilder();
             sql.append("select count(1) from (select * from (select p.product_id ");
 
             // append from and where clause
             LinkedHashSet<ColumnConfig> selectColumns = new LinkedHashSet<>();
-            buildSelectAndFromAndWhereClause(sql, selectColumns, queryParameters,productId);
+            buildSelectAndFromAndWhereClause(sql, selectColumns, queryParameters, productId);
 
             sql.append(" ) as count");
 
-            Query query = buildQuery(sql, createdBy, startDate, endDate,productId);
+            Query query = buildQuery(sql, departmentId, startDate, endDate, productId);
 
             log.debug("SQL search: {}", sql);
 
@@ -142,7 +144,7 @@ public class ProductCustomRepository {
             if (ObjectUtils.isNotEmpty(pageRequest)) {
                 totalPages = (int) Math.ceil(count / (double) pageRequest.getPageSize());
             }
-            return new PageCountData(count, totalPages, null);
+            return new PageCountData(count, totalPages);
         } catch (Exception e) {
             log.error("Error in count", e);
             throw new RuntimeException(e);
@@ -150,19 +152,18 @@ public class ProductCustomRepository {
     }
 
 
-    private Query buildQuery(StringBuilder sqlBuilder, String createdBy, LocalDate startDate, LocalDate endDate,String productId) {
+    private Query buildQuery(StringBuilder sqlBuilder, String departmentId, LocalDate startDate, LocalDate endDate, String productId) {
         Query query = em.createNativeQuery(sqlBuilder.toString());
-        query.setParameter("createdBy", createdBy);
-        query.setParameter("startDate", startDate.atStartOfDay());
-        query.setParameter("endDate", endDate.atTime(LocalTime.MAX));
-        if(StringUtils.isNotEmpty(productId))
-        {
+        query.setParameter("department", departmentId);
+        query.setParameter("startDate", startDate);
+        query.setParameter("endDate", endDate);
+        if (StringUtils.isNotEmpty(productId)) {
             query.setParameter("productId", productId);
         }
         return query;
     }
 
-    private void buildSelectAndFromAndWhereClause(StringBuilder sql, Set<ColumnConfig> columns, Set<QueryParameter> queryParameters,String productId) {
+    private void buildSelectAndFromAndWhereClause(StringBuilder sql, Set<ColumnConfig> columns, Set<QueryParameter> queryParameters, String productId) {
         Set<ColumnConfig> selectColumns = new LinkedHashSet<>(columns);
         List<QueryParameter> queryInMains = new ArrayList<>();
         List<QueryParameter> queryInInsights = new ArrayList<>();
@@ -179,7 +180,7 @@ public class ProductCustomRepository {
         }
 
         // For select column here
-        buildSelectAndFromClause(sql, selectColumns,productId);
+        buildSelectAndFromClause(sql, selectColumns, productId);
 
         // append main table where clause
         queryInMains.forEach(qM -> {
@@ -187,14 +188,19 @@ public class ProductCustomRepository {
             sql.append(QueryResolver.buildSqlCondition(qM));
         });
 
-        sql.append(" GROUP BY p.product_id, p.name, p.status,p.pos_id) s ");
+        // GROUP BY
+        if (StringUtils.isEmpty(productId)) {
+            sql.append(" GROUP BY p.product_id, p.pos_id) s ");
+        } else {
+            sql.append(" GROUP BY p.product_id, p.pos_id, TO_CHAR(oi.created_at, 'YYYY-MM-DD')) s ");
+        }
 
         // append where clause in insight table
         if (!queryInInsights.isEmpty())
             buildWhereClause(sql, queryInInsights);
     }
 
-    private void buildSelectAndFromClause(StringBuilder sql, Set<ColumnConfig> summaryColumns,String productId) {
+    private void buildSelectAndFromClause(StringBuilder sql, Set<ColumnConfig> summaryColumns, String productId) {
         summaryColumns.forEach(column -> {
             if (StringUtils.isNoneEmpty(column.getFormula())) {
                 sql.append(String.format(", %s as \"%s\"", column.getFormula(), column.getCode()));
@@ -207,8 +213,7 @@ public class ProductCustomRepository {
         sql.append(buildFromClause(List.of(ProductSource.ORDER_ITEM, ProductSource.ORDER)));
         sql.append("\n");
         // For other tabs, use the base where clause
-        if(StringUtils.isEmpty(productId))
-        {
+        if (StringUtils.isEmpty(productId)) {
             sql.append(BASE_WHERE_CLAUSE);
         } else {
             sql.append(PRODUCT_WHERE_CLAUSE);

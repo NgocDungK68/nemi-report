@@ -66,7 +66,7 @@ nemi:
             titleVi: "Doanh số"
             type: DECIMAL
             mapping: revenue
-            formula: SUM(i.revenue)
+            formula: "SUM(oi.total_price) FILTER (WHERE o.status IN ('NEW','PROCESSING','SHIPPING','READY_TO_SHIP','DELIVERED'))"
             avg-formula: SUM(data.revenue)
             summary-type: SUM
             hasFilter: true
@@ -141,11 +141,21 @@ nemi:
             mapping: successful_orders
             hasFilter: true
 
+          - code: returned_orders
+            titleEn: "Returned Orders"
+            titleVi: "Đơn hoàn"
+            type: INTEGER
+            formula: "COUNT(DISTINCT oi.order_id) FILTER (WHERE o.status IN ('RETURNED','CANCELLED','FAILED'))"
+            summary-type: SUM
+            source: INSIGHT
+            mapping: returned_orders
+            hasFilter: true
+
           - code: cancelled_orders
             titleEn: "Cancelled Orders"
             titleVi: "Đơn hủy"
             type: INTEGER
-            formula: "COUNT(DISTINCT oi.order_id) FILTER (WHERE o.status IN ('CANCELLED', 'FAILED', 'RETURNED'))"
+            formula: "COUNT(DISTINCT oi.order_id) FILTER (WHERE o.status IN ('CANCELLED', 'FAILED'))"
             summary-type: SUM
             source: INSIGHT
             mapping: cancelled_orders
