@@ -89,7 +89,7 @@ public class ProductCustomRepository {
             // append order by clause
             ColumnConfig firstColumn = columns.stream().findFirst().orElse(null);
             if (ObjectUtils.isEmpty(pageRequest) && ObjectUtils.isNotEmpty(firstColumn)) {
-                sql.append(String.format("s.%s desc", firstColumn.getCode()));
+                sql.append(String.format("s.%s desc NULLS LAST", firstColumn.getCode()));
             } else if (ObjectUtils.isEmpty(orderParameters) || !StringUtils.isEmpty(productId)) {
                 sql.append("s.created_at desc");
             } else {

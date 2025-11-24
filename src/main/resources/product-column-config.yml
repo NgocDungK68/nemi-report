@@ -66,7 +66,8 @@ nemi:
             titleVi: "Doanh số"
             type: DECIMAL
             mapping: revenue
-            formula: "SUM(oi.total_price) FILTER (WHERE o.status IN ('NEW','PROCESSING','SHIPPING','READY_TO_SHIP','DELIVERED'))"
+            source: ORDER
+            formula: "SUM(o.total_price) FILTER (WHERE o.status IN ('NEW','PROCESSING','SHIPPING','READY_TO_SHIP','DELIVERED'))"
             avg-formula: SUM(data.revenue)
             summary-type: SUM
             hasFilter: true
