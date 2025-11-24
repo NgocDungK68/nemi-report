@@ -7,7 +7,6 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.util.List;
 
 @Data
@@ -68,9 +67,10 @@ public class ProductsChartResponse {
     }
 
     @Data
+    @Builder
     public static class DateValue {
         @JsonProperty("date")
-        private LocalDate date; // dd/MM/yyyy format
+        private String date;
 
         @JsonProperty("value")
         private BigDecimal value;

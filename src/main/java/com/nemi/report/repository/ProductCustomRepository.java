@@ -1,6 +1,7 @@
 package com.nemi.report.repository;
 
 import com.nemi.report.constant.ColumnDataType;
+import com.nemi.report.constant.Limit;
 import com.nemi.report.constant.ProductSource;
 import com.nemi.report.model.OrderParameter;
 import com.nemi.report.model.QueryParameter;
@@ -56,8 +57,6 @@ public class ProductCustomRepository {
                                     = oi.order_id
                         """);
             }
-            // sau này có thể thêm bảng khác mà không đụng code gốc
-            // else if (source.equals(ProductSource.WAREHOUSE)) { ... }
         }
 
         return sql.toString();
@@ -65,7 +64,7 @@ public class ProductCustomRepository {
 
 
     @SuppressWarnings({"unchecked"})
-    public List<Map<String, Object>> search(Set<ColumnConfig> columns, Set<QueryParameter> queryParameters, Set<OrderParameter> orderParameters, LocalDate startDate, LocalDate endDate, PageRequest pageRequest, String departmentId, String productId) {
+    public List<Map<String, Object>> search(Set<ColumnConfig> columns, Set<QueryParameter> queryParameters, Set<OrderParameter> orderParameters, Limit limit, LocalDate startDate, LocalDate endDate, PageRequest pageRequest, String departmentId, String productId) {
         try {
             StringBuilder sql = new StringBuilder();
             sql.append("select * from (select p.product_id, p.name, p.status ");
@@ -89,7 +88,7 @@ public class ProductCustomRepository {
             // append order by clause
             ColumnConfig firstColumn = columns.stream().findFirst().orElse(null);
             if (ObjectUtils.isEmpty(pageRequest) && ObjectUtils.isNotEmpty(firstColumn)) {
-                sql.append(String.format("s.%s desc", firstColumn.getCode()));
+                sql.append(String.format("s.%s desc NULLS LAST", firstColumn.getCode()));
             } else if (ObjectUtils.isEmpty(orderParameters) || !StringUtils.isEmpty(productId)) {
                 sql.append("s.created_at desc");
             } else {
@@ -105,7 +104,9 @@ public class ProductCustomRepository {
             if (ObjectUtils.isNotEmpty(pageRequest)) {
                 query.setFirstResult(pageRequest.getPageNumber() * pageRequest.getPageSize());
                 query.setMaxResults(pageRequest.getPageSize());
-            } else {
+            } else if (ObjectUtils.isNotEmpty(limit)) {
+                query.setMaxResults(limit.getValue());
+            }  else {
                 query.setMaxResults(10);   // LIMIT 10
             }
 

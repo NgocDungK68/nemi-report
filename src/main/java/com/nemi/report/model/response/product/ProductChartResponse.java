@@ -26,6 +26,9 @@ public class ProductChartResponse {
     @Data
     @Builder
     public static class DateData {
+        @JsonProperty("date")
+        private String date;
+
         @JsonProperty("value")
         private BigDecimal value;
 

@@ -40,7 +40,7 @@ public class ReportUtils {
 
     public static BigDecimal calculatePercentage(BigDecimal value, BigDecimal total, int scale) {
         if (ObjectUtils.isEmpty(value) || ObjectUtils.isEmpty(total) || total.compareTo(BigDecimal.ZERO) == 0) {
-            throw new RuntimeException("Calculate percentage error");
+            return BigDecimal.ZERO;
         }
 
         return value
