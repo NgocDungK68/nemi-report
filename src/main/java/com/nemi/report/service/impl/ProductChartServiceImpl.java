@@ -13,10 +13,14 @@ import com.nemi.report.service.ProductChartService;
 import com.nemi.report.util.ReportUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.ObjectUtils;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -41,6 +45,7 @@ public class ProductChartServiceImpl implements ProductChartService {
                     columnRequest,
                     null,
                     null,
+                    request.getLimit(),
                     null
             );
 
@@ -53,7 +58,7 @@ public class ProductChartServiceImpl implements ProductChartService {
                     null
             );
 
-            return buildProductsChartResponse(productReportModels, summary, code);
+            return buildProductsChartResponse(request, productReportModels, summary, request.isSplitByDate(), request.getStartDate(), request.getEndDate(), code);
         } catch (Exception e) {
             log.error("[getProductsChart] error: {}", e.getMessage(), e);
             throw new TechnicalException(AlertMessages.alert(TechnicalAlertCode.SYSTEM_ERROR));
@@ -74,6 +79,7 @@ public class ProductChartServiceImpl implements ProductChartService {
                     columnRequest,
                     null,
                     null,
+                    request.getLimit(),
                     productId
             );
 
@@ -97,19 +103,39 @@ public class ProductChartServiceImpl implements ProductChartService {
         return List.of(new ColumnRequest(code, null));
     }
 
-    private ProductsChartResponse buildProductsChartResponse(List<ProductReportModel> productReportModels,
+    private ProductsChartResponse buildProductsChartResponse(ReportChartRequest request,
+                                                             List<ProductReportModel> productReportModels,
                                                              Map<String, Object> summary,
+                                                             boolean splitByDate,
+                                                             LocalDate startDate,
+                                                             LocalDate endDate,
                                                              String code) {
         BigDecimal summaryValue = sumData(productReportModels, code);
         int scale = reportConfig.getScale().getPercent();
 
+        // build summary each day from startDate to endDate
+        Map<LocalDate, BigDecimal> summaryEachDay = new HashMap<>();
+        Map<String, ProductChartResponse> productMap = new HashMap<>();
+
+        if (splitByDate) {
+            summaryEachDay = buildSummaryEachDay(productReportModels, request, startDate, endDate);
+
+            // build product map
+            for (ProductReportModel productReportModel : productReportModels) {
+                String productId = productReportModel.getProductId();
+                ProductChartResponse productChartResponse = getProductChartByProductId(productId, request);
+                productMap.put(productId, productChartResponse);
+            }
+        }
+
         List<ProductsChartResponse.ProductData> productDataList = new ArrayList<>();
         for (ProductReportModel productReportModel : productReportModels) {
             ProductsChartResponse.ProductData productData = new ProductsChartResponse.ProductData();
+            String productId = productReportModel.getProductId();
 
             // set product info
             productData.setProduct(ProductsChartResponse.Product.builder()
-                    .id(productReportModel.getProductId())
+                    .id(productId)
                     .name(productReportModel.getProductName())
                     .build());
 
@@ -123,7 +149,15 @@ public class ProductChartServiceImpl implements ProductChartService {
                     .percent(percent)
                     .build());
 
-            // TODO: dateValues
+            // build dateValues
+            if (splitByDate) {
+                List<ProductsChartResponse.DateValue> dateValues = buildDateValues(
+                        productMap, summaryEachDay, productId,
+                        startDate, endDate, scale
+                );
+
+                productData.setDateValues(dateValues);
+            }
 
             // add to productDataList
             productDataList.add(productData);
@@ -153,6 +187,7 @@ public class ProductChartServiceImpl implements ProductChartService {
             BigDecimal percent = ReportUtils.calculatePercentage(value, summaryValue, scale);
 
             ProductChartResponse.DateData dateData = ProductChartResponse.DateData.builder()
+                    .date(productReportModel.getReportDate())
                     .value(value)
                     .percent(percent)
                     .build();
@@ -169,6 +204,75 @@ public class ProductChartServiceImpl implements ProductChartService {
                 .dateData(dateDataList)
                 .summary(summaryData)
                 .build();
+    }
+
+    private Map<LocalDate, BigDecimal> buildSummaryEachDay(List<ProductReportModel> productReportModels,
+                                                           ReportChartRequest request,
+                                                           LocalDate startDate,
+                                                           LocalDate endDate) {
+        Map<LocalDate, BigDecimal> summaryEachDay = new HashMap<>();
+        Map<String, ProductChartResponse> productMap = new HashMap<>();
+        for (ProductReportModel productReportModel : productReportModels) {
+            String productId = productReportModel.getProductId();
+            ProductChartResponse productChartResponse = getProductChartByProductId(productId, request);
+            productMap.put(productId, productChartResponse);
+        }
+
+        LocalDate currentDate = startDate;
+        while (!currentDate.isAfter(endDate)) {
+            BigDecimal sum = BigDecimal.ZERO;
+            for (ProductReportModel productReportModel : productReportModels) {
+                ProductChartResponse.DateData data = getDateData(productMap, productReportModel.getProductId(),currentDate);
+                if (ObjectUtils.isNotEmpty(data)) sum = sum.add(data.getValue());
+            }
+
+            summaryEachDay.put(currentDate, sum);
+            currentDate = currentDate.plusDays(1);
+        }
+
+        return summaryEachDay;
+    }
+
+    private ProductChartResponse.DateData getDateData(Map<String, ProductChartResponse> productMap,
+                                                      String productId,
+                                                      LocalDate date) {
+        ProductChartResponse productChartResponse = productMap.get(productId);
+        String dateString = date.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+        return productChartResponse.getDateData().stream()
+                .filter(dateData -> dateString.equals(dateData.getDate()))
+                .findFirst()
+                .orElse(null);
+    }
+
+    private List<ProductsChartResponse.DateValue> buildDateValues(Map<String, ProductChartResponse> productMap,
+                                                                  Map<LocalDate, BigDecimal> summaryEachDay,
+                                                                  String productId,
+                                                                  LocalDate startDate,
+                                                                  LocalDate endDate,
+                                                                  int scale) {
+        List<ProductsChartResponse.DateValue> dateValues = new ArrayList<>();
+        LocalDate currentDate = startDate;
+
+        while (!currentDate.isAfter(endDate)) {
+            ProductChartResponse.DateData dataCurrentDate = getDateData(productMap, productId, currentDate);
+            BigDecimal valueCurrentDate = BigDecimal.ZERO;
+            if (dataCurrentDate != null) {
+                valueCurrentDate = ReportUtils.convertToBigDecimal(dataCurrentDate.getValue());
+            }
+
+            BigDecimal percentCurrentDate = ReportUtils.calculatePercentage(valueCurrentDate, summaryEachDay.get(currentDate), scale);
+
+            ProductsChartResponse.DateValue dateValue = ProductsChartResponse.DateValue.builder()
+                    .date(currentDate.format(DateTimeFormatter.ofPattern("yyyy-MM-dd")))
+                    .value(valueCurrentDate)
+                    .percent(percentCurrentDate)
+                    .build();
+
+            dateValues.add(dateValue);
+            currentDate = currentDate.plusDays(1);
+        }
+
+        return dateValues;
     }
 
     private ProductsChartResponse.Summary buildSummaryData(Map<String, Object> summary, BigDecimal summaryValue, int scale, String code) {

@@ -5,6 +5,7 @@ import com.nemi.exception.TechnicalException;
 import com.nemi.exception.pojo.AlertMessages;
 import com.nemi.report.configuration.ProductConfig;
 import com.nemi.report.constant.ColumnDataType;
+import com.nemi.report.constant.Limit;
 import com.nemi.report.constant.ProductSource;
 import com.nemi.report.constant.ReportConstants;
 import com.nemi.report.exception.TechnicalAlertCode;
@@ -63,6 +64,7 @@ public class ProductSummaryServiceImpl implements ProductSummaryService {
                     request.getColumns(),
                     request.getFilters(),
                     pageRequest,
+                    null,
                     null
             );
 
@@ -105,6 +107,7 @@ public class ProductSummaryServiceImpl implements ProductSummaryService {
                     request.getColumns(),
                     request.getFilters(),
                     pageRequest,
+                    null,
                     productId
             );
 
@@ -155,6 +158,7 @@ public class ProductSummaryServiceImpl implements ProductSummaryService {
                                                              List<ColumnRequest> columns,
                                                              List<FilterRequest> filters,
                                                              PageRequest pageRequest,
+                                                             Limit limit,
                                                              String productId) {
         LinkedHashSet<ColumnConfig> viewColumns = new LinkedHashSet<>();
         LinkedHashSet<ColumnConfig> searchColumns = new LinkedHashSet<>();
@@ -190,7 +194,7 @@ public class ProductSummaryServiceImpl implements ProductSummaryService {
         // query data
         List<Map<String, Object>> data = productCustomRepository.search(
                 new LinkedHashSet<>(searchColumns),
-                queryParameters, orderParameters,
+                queryParameters, orderParameters, limit,
                 startDate, endDate, pageRequest,
                 claimUtil.getDepartmentId(), productId
         );

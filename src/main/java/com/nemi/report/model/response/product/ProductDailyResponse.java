@@ -25,7 +25,7 @@ public class ProductDailyResponse {
     @Data
     public static class DataItem {
         @JsonProperty("date")
-        private String date; // dd/MM/yyyy format
+        private String date;
 
         @JsonProperty("extraData")
         private Map<String, Object> extraData;
