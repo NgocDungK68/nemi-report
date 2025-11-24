@@ -213,7 +213,7 @@ public class ProductSummaryServiceImpl implements ProductSummaryService {
                 } else if (viewColumns.stream().anyMatch(c -> StringUtils.equals(c.getCode(), key))) {
                     ColumnConfig matchColumn = viewColumns.stream().filter(c -> StringUtils.equals(c.getCode(), key)).findFirst().orElse(null);
 
-                    if (matchColumn != null) {
+                    if (ObjectUtils.isNotEmpty(matchColumn) && ObjectUtils.isNotEmpty(value)) {
                         if (value instanceof Number n) {
                             extraData.put(key, n);
                         } else if (matchColumn.getType().equals(ColumnDataType.TIMESTAMP)) {
