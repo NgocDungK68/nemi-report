@@ -65,4 +65,8 @@ public class ReportUtils {
 
         return value;
     }
+
+    public static int calculateTotalPages(int totalElements, int size) {
+        return (int) Math.ceil(totalElements / (double) size);
+    }
 }

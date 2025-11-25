@@ -2,6 +2,8 @@ package com.nemi.report.client;
 
 import com.nemi.config.feign.PeerServiceFeignClientConfig;
 import com.nemi.report.model.ads_manager.AdsCostOfDepartmentRequest;
+import com.nemi.report.model.ads_manager.AdsCostOfUsersRequest;
+import com.nemi.report.model.ads_manager.AdsCostOfUsersResponse;
 import com.nemi.report.model.ads_manager.AdsCostResponse;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.http.ResponseEntity;
@@ -17,4 +19,7 @@ public interface AdsManagerClient {
 
     @PostMapping("service-api/v1/ad-cost-of-department")
     ResponseEntity<AdsCostResponse> getAdsCostOfDepartment(@RequestBody AdsCostOfDepartmentRequest request);
+
+    @PostMapping("service-api/v1/ad-cost-of-users")
+    ResponseEntity<AdsCostOfUsersResponse> getAdsCostOfUsers(@RequestBody AdsCostOfUsersRequest request);
 }

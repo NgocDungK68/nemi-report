@@ -4,7 +4,6 @@ import com.fasterxml.jackson.annotation.JsonIncludeProperties;
 import com.nemi.report.constant.ProductSource;
 import com.nemi.report.constant.ColumnDataType;
 import com.nemi.report.constant.ColumnEnumData;
-import com.nemi.report.model.response.nemi.SummaryData;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -31,6 +30,7 @@ public class ColumnConfig {
     private String avgFormula;
     private SummaryData.SummaryType summaryType = SummaryData.SummaryType.SUM;
     private Boolean hasFilter = true;
+    private Boolean hasOrder = true;
     private List<ColumnEnumData> enums;
     private Boolean updatable = false;
     private Boolean isUseCent = false;

@@ -9,6 +9,7 @@ import lombok.Data;
 
 import jakarta.validation.constraints.NotNull;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 
 @Data
@@ -38,5 +39,5 @@ public class ReportSummaryRequest {
     @Size(min = 1)
     private List<ColumnRequest> columns;
 
-    private List<FilterRequest> filters;
+    private List<FilterRequest> filters = new ArrayList<>();
 }

@@ -7,6 +7,7 @@ import com.nemi.report.model.response.staff.StaffChartResponse;
 import com.nemi.report.model.response.staff.StaffDailyResponse;
 import com.nemi.report.model.response.staff.StaffSummaryResponse;
 import com.nemi.report.model.response.staff.StaffsChartResponse;
+import com.nemi.report.service.StaffReportService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -20,28 +21,24 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class StaffReportController {
 
-    @RequirePermission("REPORTING.STAFF_REPORT.VIEW")
-    @PostMapping("/summary")
-    public ResponseEntity<StaffSummaryResponse> getStaffSummary(@RequestBody ReportSummaryRequest request) {
-        // TODO: Implement service call
-        // StaffSummaryResponse response = staffSummaryService.getStaffSummary(request);
+    private final StaffReportService staffReportService;
 
-        // Mock
-        StaffSummaryResponse response = new StaffSummaryResponse();
+    //    @RequirePermission("REPORTING.STAFF_REPORT.VIEW")
+    @PostMapping
+    public ResponseEntity<StaffSummaryResponse> getStaffSummary(@RequestBody ReportSummaryRequest request) {
+        StaffSummaryResponse response = staffReportService.getStaffReportSummary(request);
+
         return ResponseEntity.ok(response);
     }
 
-    @RequirePermission("REPORTING.STAFF_REPORT.VIEW")
+    //    @RequirePermission("REPORTING.STAFF_REPORT.VIEW")
     @PostMapping("/{staffId}")
     public ResponseEntity<StaffDailyResponse> getStaffSummary(
             @PathVariable(name = "staffId") String staffId,
             @RequestBody ReportSummaryRequest request
     ) {
-        // TODO: Implement service call
-        // StaffDailyResponse response = staffSummaryService.getStaffDaily(staffId, request);
+        StaffDailyResponse response = staffReportService.getStaffDailyResponse(staffId, request);
 
-        // Mock
-        StaffDailyResponse response = new StaffDailyResponse();
         return ResponseEntity.ok(response);
     }
 
