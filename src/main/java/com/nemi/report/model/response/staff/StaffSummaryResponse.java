@@ -1,6 +1,7 @@
 package com.nemi.report.model.response.staff;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.nemi.report.model.pojo.UserData;
 import lombok.Data;
 
 import java.util.List;
@@ -27,17 +28,5 @@ public class StaffSummaryResponse {
 
         @JsonProperty("extraData")
         private Map<String, Object> extraData;
-    }
-
-    @Data
-    public static class UserData {
-        @JsonProperty("id")
-        private String id;
-
-        @JsonProperty("name")
-        private String name;
-
-        @JsonProperty("image")
-        private String imageUrl;
     }
 }

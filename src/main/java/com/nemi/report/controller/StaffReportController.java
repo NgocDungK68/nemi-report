@@ -1,8 +1,7 @@
 package com.nemi.report.controller;
 
-import com.nemi.annotation.RequirePermission;
-import com.nemi.report.model.request.ReportChartRequest;
 import com.nemi.report.model.request.ReportSummaryRequest;
+import com.nemi.report.model.request.staff.StaffChartRequest;
 import com.nemi.report.model.response.staff.StaffChartResponse;
 import com.nemi.report.model.response.staff.StaffDailyResponse;
 import com.nemi.report.model.response.staff.StaffSummaryResponse;
@@ -35,35 +34,26 @@ public class StaffReportController {
     @PostMapping("/{staffId}")
     public ResponseEntity<StaffDailyResponse> getStaffSummary(
             @PathVariable(name = "staffId") String staffId,
-            @RequestBody ReportSummaryRequest request
-    ) {
-        StaffDailyResponse response = staffReportService.getStaffDailyResponse(staffId, request);
-
+            @RequestBody ReportSummaryRequest request) {
+        StaffDailyResponse response = staffReportService.getStaffDaily(staffId, request);
         return ResponseEntity.ok(response);
     }
 
-    @RequirePermission("REPORTING.STAFF_REPORT.VIEW")
+//    @RequirePermission("REPORTING.STAFF_REPORT.VIEW")
     @PostMapping("/staffs-chart")
-    public ResponseEntity<StaffsChartResponse> getStaffsChart(@RequestBody ReportChartRequest request) {
-        // TODO: Implement service call
-        // StaffsChartResponse response = staffChartService.getStaffsChart(request);
-
-        // Mock
-        StaffsChartResponse response = new StaffsChartResponse();
+    public ResponseEntity<StaffsChartResponse> getStaffsChart(@RequestBody StaffChartRequest request) {
+        StaffsChartResponse response = staffReportService.getAllStaffsChart(request);
         return ResponseEntity.ok(response);
     }
 
-    @RequirePermission("REPORTING.STAFF_REPORT.VIEW")
-    @PostMapping("/staff-chart/{staffId}")
+//    @RequirePermission("REPORTING.STAFF_REPORT.VIEW")
+    @PostMapping("/staff-chart/{userId}")
     public ResponseEntity<StaffChartResponse> getStaffChart(
-            @PathVariable(name = "staffId") String staffId,
-            @RequestBody ReportChartRequest request
+            @PathVariable(name = "userId") String userId,
+            @RequestBody StaffChartRequest request
     ) {
-        // TODO: Implement service call
-        // StaffChartResponse response = staffChartService.getStaffChart(staffId, request);
+        StaffChartResponse response = staffReportService.getStaffChart(userId, request);
 
-        // Mock
-        StaffChartResponse response = new StaffChartResponse();
         return ResponseEntity.ok(response);
     }
 }

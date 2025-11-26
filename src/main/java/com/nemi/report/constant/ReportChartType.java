@@ -5,7 +5,7 @@ import lombok.RequiredArgsConstructor;
 
 @Getter
 @RequiredArgsConstructor
-public enum MarketingChartType {
+public enum ReportChartType {
     REVENUE("revenue"),
     ORDERS("orders"),
     AD_COST("ad_cost"),

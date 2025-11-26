@@ -46,12 +46,12 @@ public class ReportHelperService {
         applyExchangeRatesToOrders(orderQueryModel, rateByDateMap, currency);
     }
 
-    public <T extends ReportModel> Object getValueFromReportModel(T reportModel, String mapping) {
-        if (mapping == null) {
+    public <T extends ReportModel> Object getValueFromReportModel(T reportModel, String code) {
+        if (code == null) {
             return null;
         }
 
-        return switch (mapping) {
+        return switch (code) {
             case "orders" -> reportModel.getOrders();
             case "confirmed_orders" -> reportModel.getConfirmedOrders();
             case "returned_orders" -> reportModel.getReturnedOrders();
@@ -161,8 +161,7 @@ public class ReportHelperService {
 
         for (ColumnConfig columnConfig : columnConfigs) {
             String code = columnConfig.getCode();
-            String mapping = columnConfig.getMapping();
-            Object value = getValueFromReportModel(reportModel, mapping);
+            Object value = getValueFromReportModel(reportModel, code);
             extraData.put(code, value);
         }
 
