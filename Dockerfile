@@ -10,4 +10,4 @@ COPY build-artifacts/*.jar /usr/local/app/app.jar
 WORKDIR /usr/local/app
 
 # Run the JAR file
-CMD ["java", "-XX:+UseContainerSupport", "-XX:MaxRAMPercentage=75.0", "-jar", "app.jar"]
+CMD ["java", "-jar", "app.jar"]
