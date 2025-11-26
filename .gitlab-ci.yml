@@ -43,7 +43,6 @@ build:
       - build-artifacts/
       - version.txt
       - project-name.txt
-      - docker-compose.yml
       - commit-hash.txt
     expire_in: 1 hour
   rules:
