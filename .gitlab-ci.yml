@@ -1,11 +1,9 @@
 image:
   name: docker:25.0
 
-
 services:
   - name: docker:25.0-dind
     alias: docker
-
 
 variables:
   AWS_DEFAULT_REGION: $AWS_REGION
@@ -34,11 +32,9 @@ build:
     - export PROJECT_VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
     - echo $PROJECT_VERSION > version.txt
     - export PROJECT_NAME=$(mvn help:evaluate -Dexpression=project.artifactId -q -DforceStdout)
-    - echo "Project name is $PROJECT_NAME"
     - echo $PROJECT_NAME > project-name.txt
     - export COMMIT_HASH_SHORT="${CI_COMMIT_SHA:0:7}"
     - echo $COMMIT_HASH_SHORT > commit-hash.txt
-    - echo "Commit hash is $COMMIT_HASH_SHORT"
     - mkdir -p build-artifacts
     - cp target/${PROJECT_NAME}-${PROJECT_VERSION}.jar build-artifacts/${PROJECT_NAME}.jar
 
@@ -71,7 +67,6 @@ dockerize:
     - export IMAGE_TAG="${PROJECT_NAME}-${ENV_NAME}-${PROJECT_VERSION}-${COMMIT_HASH_SHORT}"
     - aws ecr get-login-password --region "$AWS_REGION" | docker login --username AWS --password-stdin "$ECR_REGISTRY"
     - echo "ECR login successful"
-    - ls
   script:
     - docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
     - docker buildx create --use --name multibuilder
