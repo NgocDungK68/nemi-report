@@ -1,4 +1,4 @@
-FROM eclipse-temurin:17-jre-alpine
+FROM amazoncorretto:17-alpine
 
 # Expose the port the application will run on
 EXPOSE 8080
@@ -10,4 +10,4 @@ COPY build-artifacts/*.jar /usr/local/app/app.jar
 WORKDIR /usr/local/app
 
 # Run the JAR file
-CMD ["java", "-XX:+UseContainerSupport", "-XX:MaxRAMPercentage=75.0", "-jar", "app.jar"]
+CMD ["java", "-jar", "app.jar"]
