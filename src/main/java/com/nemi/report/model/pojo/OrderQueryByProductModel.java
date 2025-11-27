@@ -1,6 +1,7 @@
 package com.nemi.report.model.pojo;
 
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -9,9 +10,14 @@ import java.math.BigDecimal;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class OrderQueryModel {
+@Builder
+public class OrderQueryByProductModel {
+    // product
+    private String productId;
+    private String name;
+    private String image;
 
-    private String reportDate;
+    // order
     private long orders;
     private long confirmedOrders;
     private long returnedOrders;

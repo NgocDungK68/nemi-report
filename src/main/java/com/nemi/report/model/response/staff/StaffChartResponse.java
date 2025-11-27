@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 
 @Data
@@ -19,6 +20,9 @@ public class StaffChartResponse {
 
     @Data
     public static class DateData {
+        @JsonProperty("date")
+        private LocalDate date;
+
         @JsonProperty("value")
         private BigDecimal value;
 

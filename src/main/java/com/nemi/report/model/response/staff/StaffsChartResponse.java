@@ -1,27 +1,34 @@
 package com.nemi.report.model.response.staff;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.nemi.report.model.pojo.UserData;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
 @Data
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
 public class StaffsChartResponse {
     @JsonProperty("totalElements")
     private Integer totalElements;
 
-    @JsonProperty("staffData")
-    private List<StaffData> staffData;
+    @JsonProperty("userData")
+    private List<StaffChartData> userData;
 
     @JsonProperty("summary")
     private Summary summary;
 
     @Data
-    public static class StaffData {
-        @JsonProperty("product")
-        private Product product;
+    public static class StaffChartData {
+        @JsonProperty("user")
+        private UserData user;
 
         @JsonProperty("data")
         private DataValue data;
@@ -37,15 +44,6 @@ public class StaffsChartResponse {
 
         @JsonProperty("percent")
         private BigDecimal percent;
-    }
-
-    @Data
-    public static class Product {
-        @JsonProperty("id")
-        private String id;
-
-        @JsonProperty("name")
-        private String name;
     }
 
     @Data

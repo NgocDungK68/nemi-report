@@ -7,10 +7,15 @@ import com.nemi.report.constant.ColumnDataType;
 import com.nemi.report.exception.ValidationAlertCode;
 import com.nemi.report.model.QueryParameter;
 import com.nemi.report.model.config.ColumnConfig;
+import com.nemi.report.model.request.ColumnRequest;
+import com.nemi.report.model.request.FilterRequest;
 import lombok.experimental.UtilityClass;
 import org.apache.commons.lang3.StringUtils;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 @UtilityClass
 public class QueryResolver {
@@ -97,7 +102,66 @@ public class QueryResolver {
         }
     }
 
+    public static String toWhereClause(String table, List<FilterRequest> filters) {
+        return filters.stream()
+                .map(filter -> toWhereCondition(table, filter))
+                .collect(Collectors.joining(" AND "));
+    }
+
+    public static String toWhereCondition(String table, FilterRequest filter) {
+        String field = table + "." + filter.getCode();
+        List<String> values = new ArrayList<>(filter.getValue());
+
+        switch (filter.getType()) {
+            case EQUAL -> {
+                return field + " = " + String.format("'%s'", values.get(0));
+            }
+            case FROM -> {
+                return field + " >= " + String.format("'%s'", values.get(0));
+            }
+            case WITHIN -> {
+                return field + " <= " + String.format("'%s'", values.get(0));
+            }
+            case BETWEEN -> {
+                if (values.size() < 2) {
+                    throw new ValidationException(AlertMessages.alert(ValidationAlertCode.DATA_INVALID));
+                }
+                return field + " BETWEEN " + String.format("'%s'", values.get(0)) + " AND " + String.format("'%s'", values.get(1));
+            }
+            case OUTSIDE -> {
+                if (values.size() < 2) {
+                    throw new ValidationException(AlertMessages.alert(ValidationAlertCode.DATA_INVALID));
+                }
+                return field + " NOT BETWEEN " + String.format("'%s'", values.get(0)) + " AND " + String.format("'%s'", values.get(1));
+            }
+            case IN -> {
+                String valueAgg = String.join("', '", values);
+                return field + " IN ('" + valueAgg + "')";
+            }
+            case NOT_IN -> {
+                String valueAgg = String.join("', '", values);
+                return field + " NOT IN ('" + valueAgg + "')";
+            }
+            case LIKE -> {
+                return field + " ILIKE " + "'%" + values.get(0) + "%'";
+            }
+            case NOT_LIKE -> {
+                return field + " NOT ILIKE " + "'%" + values.get(0) + "%'";
+            }
+            default -> {
+                return "";
+            }
+        }
+    }
+
     public static String getColumnMapping(ColumnConfig column) {
         return column.getMapping();
+    }
+
+    public static String toOrderClause(String table, List<ColumnRequest> columns) {
+        return columns.stream()
+                .filter(column -> column.getOrder() != null)
+                .map(column -> String.format("%s.%s %s NULLS LAST", table, column.getCode(), column.getOrder()))
+                .collect(Collectors.joining(", "));
     }
 }

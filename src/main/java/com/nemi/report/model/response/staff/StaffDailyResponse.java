@@ -3,7 +3,6 @@ package com.nemi.report.model.response.staff;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 
-import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
@@ -24,7 +23,7 @@ public class StaffDailyResponse {
     @Data
     public static class DataItem {
         @JsonProperty("date")
-        private LocalDate date; // dd/MM/yyyy format
+        private String date; // dd/MM/yyyy format
 
         @JsonProperty("extraData")
         private Map<String, Object> extraData;

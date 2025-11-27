@@ -6,19 +6,18 @@ import java.math.BigDecimal;
 
 @Data
 public class ReportModel {
-    private String reportDate; // dd/MM/yyyy
 
-    private long orders;
-    private long confirmedOrders;
-    private long returnedOrders;
-    private long successOrders;
+    protected long orders;
+    protected long confirmedOrders;
+    protected long returnedOrders;
+    protected long successOrders;
 
-    private BigDecimal revenue; // Doanh số
-    private BigDecimal trueRevenue; // Doanh thu
-    private BigDecimal profit; // Lợi nhuận = trueRevenue - adCost
+    protected BigDecimal revenue; // Doanh số
+    protected BigDecimal trueRevenue; // Doanh thu
+    protected BigDecimal profit; // Lợi nhuận = trueRevenue - adCost
 
-    private BigDecimal adCost;
-    private BigDecimal adCostPerOrder;
-    private BigDecimal adCostPerConfirmedOrder;
-    private Double adCostPerRevenue;
+    protected BigDecimal adCost;
+    protected BigDecimal adCostPerOrder;
+    protected BigDecimal adCostPerConfirmedOrder;
+    protected Double adCostPerRevenue;
 }

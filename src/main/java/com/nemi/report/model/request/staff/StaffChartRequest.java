@@ -1,21 +1,18 @@
-package com.nemi.report.model.request;
+package com.nemi.report.model.request.staff;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.nemi.constant.CurrencyCodeEnum;
-import com.nemi.report.constant.ChartData;
 import com.nemi.report.constant.Limit;
+import com.nemi.report.constant.ReportChartType;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 import java.time.LocalDate;
 
 @Data
-public class ReportChartRequest {
+public class StaffChartRequest {
     @NotNull
-    private ChartData chartData;
-
-    @NotNull
-    private CurrencyCodeEnum currency;
+    private CurrencyCodeEnum currency; // VND/USD
 
     @NotNull
     @JsonFormat(pattern = "yyyy-MM-dd")
@@ -26,8 +23,9 @@ public class ReportChartRequest {
     private LocalDate endDate;
 
     @NotNull
-    private boolean splitByDate;
+    private ReportChartType chartData;
 
-    @NotNull
-    private Limit limit;
+    private boolean splitByDate = false;
+
+    private Limit limit = Limit.TOP5;
 }

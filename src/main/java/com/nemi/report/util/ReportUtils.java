@@ -56,13 +56,18 @@ public class ReportUtils {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
-    public static BigDecimal convertToBigDecimal(Object object) {
-        BigDecimal value = BigDecimal.ZERO;
-
-        if (object instanceof Number number) {
-            value = new BigDecimal(number.toString());
+    public static BigDecimal convertToBigDecimal(Object value) {
+        if (value instanceof BigDecimal bd) {
+            return bd;
+        } else if (value instanceof Long l) {
+            return BigDecimal.valueOf(l);
+        } else if (value instanceof Double d) {
+            return BigDecimal.valueOf(d);
         }
+        return BigDecimal.ZERO;
+    }
 
-        return value;
+    public static int calculateTotalPages(int totalElements, int size) {
+        return (int) Math.ceil(totalElements / (double) size);
     }
 }
