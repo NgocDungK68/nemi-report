@@ -50,6 +50,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+import static com.nemi.report.util.ReportUtils.convertToBigDecimal;
+
 @Service
 @Slf4j
 @RequiredArgsConstructor
@@ -685,17 +687,6 @@ public class StaffReportServiceImpl implements StaffReportService {
                     return convertToBigDecimal(value);
                 })
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
-    }
-
-    private BigDecimal convertToBigDecimal(Object value) {
-        if (value instanceof BigDecimal bd) {
-            return bd;
-        } else if (value instanceof Long l) {
-            return BigDecimal.valueOf(l);
-        } else if (value instanceof Double d) {
-            return BigDecimal.valueOf(d);
-        }
-        return BigDecimal.ZERO;
     }
 
     private BigDecimal calculatePercent(BigDecimal value, BigDecimal totalValue) {

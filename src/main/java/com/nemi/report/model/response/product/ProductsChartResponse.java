@@ -7,6 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 
 @Data
@@ -38,6 +39,8 @@ public class ProductsChartResponse {
 
     @Data
     @Builder
+    @AllArgsConstructor
+    @NoArgsConstructor
     public static class Summary {
         @JsonProperty("value")
         private BigDecimal value;
@@ -48,6 +51,8 @@ public class ProductsChartResponse {
 
     @Data
     @Builder
+    @AllArgsConstructor
+    @NoArgsConstructor
     public static class Product {
         @JsonProperty("id")
         private String id;
@@ -58,6 +63,8 @@ public class ProductsChartResponse {
 
     @Data
     @Builder
+    @AllArgsConstructor
+    @NoArgsConstructor
     public static class DataValue {
         @JsonProperty("value")
         private BigDecimal value;
@@ -68,9 +75,11 @@ public class ProductsChartResponse {
 
     @Data
     @Builder
+    @AllArgsConstructor
+    @NoArgsConstructor
     public static class DateValue {
         @JsonProperty("date")
-        private String date;
+        private LocalDate date;
 
         @JsonProperty("value")
         private BigDecimal value;

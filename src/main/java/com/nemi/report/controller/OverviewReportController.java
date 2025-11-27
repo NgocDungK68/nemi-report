@@ -61,7 +61,7 @@ public class OverviewReportController {
         return ResponseEntity.ok(response);
     }
 
-    @RequirePermission("REPORTING.OVERVIEW_REPORT.VIEW")
+//    @RequirePermission("REPORTING.OVERVIEW_REPORT.VIEW")
     @GetMapping("/compare-chart")
     public ResponseEntity<CompareChartResponse> getCompareChart(
             @RequestParam("from") @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate from,

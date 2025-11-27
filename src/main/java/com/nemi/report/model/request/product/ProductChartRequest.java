@@ -1,18 +1,18 @@
-package com.nemi.report.model.request;
+package com.nemi.report.model.request.product;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.nemi.constant.CurrencyCodeEnum;
-import com.nemi.report.constant.ChartData;
 import com.nemi.report.constant.Limit;
+import com.nemi.report.constant.ReportChartType;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 import java.time.LocalDate;
 
 @Data
-public class ReportChartRequest {
+public class ProductChartRequest {
     @NotNull
-    private ChartData chartData;
+    private ReportChartType chartData;
 
     @NotNull
     private CurrencyCodeEnum currency;
@@ -26,8 +26,8 @@ public class ReportChartRequest {
     private LocalDate endDate;
 
     @NotNull
-    private boolean splitByDate;
+    private boolean splitByDate = false;
 
     @NotNull
-    private Limit limit;
+    private Limit limit = Limit.TOP5;
 }
