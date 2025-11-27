@@ -50,15 +50,4 @@ public class ProductSummaryResponse {
         @JsonProperty("image")
         private String imageUrl;
     }
-
-    public static List<ProductData> toProductData(List<ProductEntity> productEntities){
-        return productEntities.stream().map(entity -> {
-            ProductData productData = new ProductData();
-            productData.setId(entity.getProductId());
-            productData.setName(entity.getName());
-            productData.setImageUrl(entity.getImages());
-            return productData;
-        }).toList();
-
-    }
 }

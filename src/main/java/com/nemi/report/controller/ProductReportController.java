@@ -1,17 +1,20 @@
 package com.nemi.report.controller;
 
-import com.nemi.report.model.request.ReportChartRequest;
 import com.nemi.report.model.request.ReportSummaryRequest;
+import com.nemi.report.model.request.product.ProductChartRequest;
 import com.nemi.report.model.response.product.ProductChartResponse;
 import com.nemi.report.model.response.product.ProductDailyResponse;
 import com.nemi.report.model.response.product.ProductSummaryResponse;
 import com.nemi.report.model.response.product.ProductsChartResponse;
-import com.nemi.report.service.ProductChartService;
 import com.nemi.report.service.ProductSummaryService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/client-api/v1/report/product")
@@ -19,9 +22,6 @@ import org.springframework.web.bind.annotation.*;
 public class ProductReportController {
 
     private final ProductSummaryService productSummaryService;
-
-    //    @RequirePermission("REPORTING.PRODUCT_REPORT.VIEW")
-    private final ProductChartService productChartService;
 
     @PostMapping
     public ResponseEntity<ProductSummaryResponse> getProductSummary(@Valid @RequestBody ReportSummaryRequest request) {
@@ -42,8 +42,8 @@ public class ProductReportController {
 
 //    @RequirePermission("REPORTING.PRODUCT_REPORT.VIEW")
     @PostMapping("/products-chart")
-    public ResponseEntity<ProductsChartResponse> getProductsChart(@RequestBody ReportChartRequest request) {
-        ProductsChartResponse response = productChartService.getProductsChart(request);
+    public ResponseEntity<ProductsChartResponse> getProductsChart(@RequestBody ProductChartRequest request) {
+        ProductsChartResponse response = productSummaryService.getAllProductsChart(request);
         return ResponseEntity.ok(response);
     }
 
@@ -51,9 +51,9 @@ public class ProductReportController {
     @PostMapping("/product-chart/{productId}")
     public ResponseEntity<ProductChartResponse> getProductChart(
             @PathVariable(name = "productId") String productId,
-            @RequestBody ReportChartRequest request
+            @RequestBody ProductChartRequest request
     ) {
-        ProductChartResponse response = productChartService.getProductChartByProductId(productId, request);
+        ProductChartResponse response = productSummaryService.getProductChart(productId, request);
         return ResponseEntity.ok(response);
     }
 }
