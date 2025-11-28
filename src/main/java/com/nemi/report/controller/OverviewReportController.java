@@ -1,6 +1,7 @@
 package com.nemi.report.controller;
 
 import com.nemi.annotation.RequirePermission;
+import com.nemi.constant.CurrencyCodeEnum;
 import com.nemi.report.constant.CompareWithType;
 import com.nemi.report.constant.Currency;
 import com.nemi.report.constant.OverviewDataType;
@@ -49,7 +50,7 @@ public class OverviewReportController {
             @RequestParam("from") @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate from,
             @RequestParam("to") @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate to,
             @RequestParam(value = "compareWith", required = false) CompareWithType compareWith,
-            @RequestParam("currency") Currency currency) {
+            @RequestParam("currency") CurrencyCodeEnum currency) {
 
         OverviewReportRequest request = new OverviewReportRequest();
         request.setFrom(from);

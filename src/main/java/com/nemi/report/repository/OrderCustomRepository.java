@@ -3,6 +3,7 @@ package com.nemi.report.repository;
 import com.nemi.report.constant.ConfirmOrderWhen;
 import com.nemi.report.constant.OrderStatus;
 import com.nemi.report.constant.ReturnOrderWhen;
+import com.nemi.report.model.pojo.FullOrderQueryByDateModel;
 import com.nemi.report.model.pojo.OrderQueryByDateModel;
 import com.nemi.report.model.pojo.OrderQueryByProductModel;
 import com.nemi.report.model.pojo.OrderQueryByUserModel;
@@ -30,6 +31,62 @@ public class OrderCustomRepository {
     private final EntityManager em;
 
     private static final String TEMP_TABLE = "data";
+
+    public List<FullOrderQueryByDateModel> fullReportOrderByDate(String departmentId,
+                                                                 LocalDate startDate, LocalDate endDate,
+                                                                 ConfirmOrderWhen confirmOrderWhen, ReturnOrderWhen returnOrderWhen) {
+        List<String> confirmedStatus = confirmOrderWhen.getOrderStatus();
+        List<String> returnedStatus = returnOrderWhen.getOrderStatus();
+        List<String> confirmedStatusWithoutReturned = confirmedStatus.stream().filter(s -> !StringUtils.equals(s, OrderStatus.RETURNED.name())).toList();
+
+        String queryString = """
+                SELECT s.order_date                                                            AS report_date,
+                       SUM(s.total)                                                            AS orders,
+                       SUM(CASE WHEN s.status in :confirmed_status THEN s.total ELSE 0 END)    AS confirmed_orders,
+                       SUM(CASE WHEN s.status in :returned_status THEN s.total ELSE 0 END)     AS returned_orders,
+                       SUM(CASE WHEN s.status in :delivering_status THEN s.total ELSE 0 END)   AS delivering_orders,
+                       SUM(CASE WHEN s.status in :confirmed_status THEN s.revenue ELSE 0 END)  AS revenue,
+                       SUM(CASE WHEN s.status in :confirmed_status THEN s.revenue ELSE 0 END)  AS confirmed_revenue,
+                       SUM(CASE WHEN s.status in :returned_status THEN s.revenue ELSE 0 END)   AS returned_revenue,
+                       SUM(CASE WHEN s.status in :delivering_status THEN s.revenue ELSE 0 END) AS delivering_revenue,
+                       SUM(CASE
+                               WHEN s.status in :confirmed_status_without_returned THEN s.revenue - coalesce(s.discount, 0)
+                               ELSE 0 END)                                                     AS true_revenue
+                FROM (SELECT TO_CHAR(o.created_at, 'DD/MM/YYYY') AS order_date,
+                             o.status,
+                             COUNT(1)                            AS total,
+                             SUM(o.total_price)                  AS revenue,
+                             SUM(o.discount_amount)              AS discount
+                      FROM product_manager.orders o
+                               left join product_manager.pos p on o.pos_id = p.id
+                      WHERE p.department_id = :department_id
+                        and p.status in ('ACTIVE', 'PROCESSING')
+                        AND o.created_at >= :start_date
+                        AND o.created_at < :end_date
+                      GROUP BY TO_CHAR(o.created_at, 'DD/MM/YYYY'), o.status) AS s
+                GROUP BY s.order_date
+                """;
+
+        Query query = createNativeQueryFullOrder(departmentId, startDate, endDate, confirmedStatus, returnedStatus, confirmedStatusWithoutReturned, queryString);
+
+        @SuppressWarnings("unchecked")
+        List<Object[]> results = query.getResultList();
+
+        return results.stream()
+                .map(row -> FullOrderQueryByDateModel.builder()
+                        .reportDate((String) row[0])
+                        .orders(((Number) row[1]).longValue())
+                        .confirmedOrders(((Number) row[2]).longValue())
+                        .returnedOrders(((Number) row[3]).longValue())
+                        .deliveringOrders(((Number) row[4]).longValue())
+                        .revenue((BigDecimal) row[5])
+                        .confirmedRevenue((BigDecimal) row[6])
+                        .returnedRevenue((BigDecimal) row[7])
+                        .deliveringRevenue((BigDecimal) row[8])
+                        .trueRevenue((BigDecimal) row[9])
+                        .build())
+                .toList();
+    }
 
     public List<OrderQueryByDateModel> reportOrderByDate(String departmentId,
                                                          LocalDate startDate, LocalDate endDate,
@@ -90,6 +147,19 @@ public class OrderCustomRepository {
         query.setParameter("confirmed_status", confirmedStatus);
         query.setParameter("returned_status", returnedStatus);
         query.setParameter("success_status", OrderStatus.getSuccessfulOrdersStatus());
+        query.setParameter("confirmed_status_without_returned", confirmedStatusWithoutReturned);
+        query.setParameter("start_date", startDate.atStartOfDay());
+        query.setParameter("end_date", endDate.plusDays(1).atStartOfDay());
+
+        return query;
+    }
+
+    private Query createNativeQueryFullOrder(String departmentId, LocalDate startDate, LocalDate endDate, List<String> confirmedStatus, List<String> returnedStatus, List<String> confirmedStatusWithoutReturned, String queryString) {
+        Query query = em.createNativeQuery(queryString);
+        query.setParameter("department_id", departmentId);
+        query.setParameter("confirmed_status", confirmedStatus);
+        query.setParameter("returned_status", returnedStatus);
+        query.setParameter("delivering_status", OrderStatus.getDeliveringOrdersStatus());
         query.setParameter("confirmed_status_without_returned", confirmedStatusWithoutReturned);
         query.setParameter("start_date", startDate.atStartOfDay());
         query.setParameter("end_date", endDate.plusDays(1).atStartOfDay());

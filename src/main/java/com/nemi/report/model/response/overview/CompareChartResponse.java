@@ -29,6 +29,8 @@ public class CompareChartResponse {
         @JsonProperty("date")
         private String date; // dd/MM/yyyy
 
+        private String previousDate; // dd/MM/yyyy
+
         @JsonProperty("presentValue")
         private BigDecimal presentValue;
 

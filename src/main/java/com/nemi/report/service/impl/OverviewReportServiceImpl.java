@@ -1,17 +1,24 @@
 package com.nemi.report.service.impl;
 
+import com.nemi.constant.CurrencyCodeEnum;
 import com.nemi.exception.TechnicalException;
+import com.nemi.exception.ValidationException;
 import com.nemi.exception.pojo.AlertMessages;
+import com.nemi.report.client.AdsManagerClient;
 import com.nemi.report.configuration.ReportConfig;
-import com.nemi.report.constant.Currency;
 import com.nemi.report.constant.OrderStatus;
 import com.nemi.report.entity.OrderEntity;
 import com.nemi.report.exception.TechnicalAlertCode;
+import com.nemi.report.model.ads_manager.AdCostByDate;
+import com.nemi.report.model.ads_manager.AdsCostOfDepartmentRequest;
+import com.nemi.report.model.ads_manager.AdsCostResponse;
+import com.nemi.report.model.pojo.FullOrderQueryByDateModel;
 import com.nemi.report.model.request.CurrencyRates;
 import com.nemi.report.model.request.overview.OverviewReportRequest;
 import com.nemi.report.model.response.overview.ReportSettingResponse;
 import com.nemi.report.model.response.overview.OverviewReportResponse;
 import com.nemi.report.model.response.overview.RevenueSummary;
+import com.nemi.report.repository.OrderCustomRepository;
 import com.nemi.report.repository.OrderRepository;
 import com.nemi.report.service.ConfigService;
 import com.nemi.report.service.OverviewReportService;
@@ -36,10 +43,12 @@ import java.util.Objects;
 @Slf4j
 public class OverviewReportServiceImpl implements OverviewReportService {
     private final OrderRepository orderRepository;
+    private final OrderCustomRepository orderCustomRepository;
     private final ConfigService configService;
     private final ReportConfig reportConfig;
-    private final CurrencyRateService currencyRateService;
     private final ClaimUtil claimUtil;
+    private final AdsManagerClient adsManagerClient;
+    private final ReportHelperService reportHelperService;
 
     private int percentScale;
 
@@ -53,40 +62,60 @@ public class OverviewReportServiceImpl implements OverviewReportService {
         log.info("[OverviewReportServiceImpl.getOverviewReport] Start calculating overview report: from={} to={} compareWith={} currency={}",
                 request.getFrom(), request.getTo(), request.getCompareWith(), request.getCurrency());
 
-        ValidationUtils.validateTimeRange(request.getFrom(), request.getTo());
-        ReportSettingResponse config = configService.getConfig();
-        Currency currency = request.getCurrency();
-
-        List<String> totalOrderStatus = OrderStatus.getTotalOrdersStatus();
-        List<String> returnedOrdersStatus = config.getReturnOrderWhen().getOrderStatus();
-        List<String> confirmedOrderStatus = config.getConfirmOrderWhen().getOrderStatus();
-        List<String> deliveringOrderStatus = OrderStatus.getDeliveringOrdersStatus();
-
-        LocalDate from = request.getFrom();
-        LocalDate to = request.getTo();
-        LocalDate compareFrom = from.minusDays(request.getCompareWith().getDays());
-        LocalDate compareTo = to.minusDays(request.getCompareWith().getDays());
-        CurrencyRates currentCurrencyRates = currencyRateService.getCurrencyRate(claimUtil.getCompanyId(), from, to, currency);
-        CurrencyRates periodCurrencyRates = currencyRateService.getCurrencyRate(claimUtil.getCompanyId(), compareFrom, compareTo, currency);
-
         try {
-            OverviewReportResponse.OrderData totalRevenueData = getOrderData(totalOrderStatus, currentCurrencyRates, periodCurrencyRates);
-            OverviewReportResponse.OrderData returnedOrdersData = getOrderData(returnedOrdersStatus, currentCurrencyRates, periodCurrencyRates);
-            OverviewReportResponse.OrderData confirmedOrdersData = getOrderData(confirmedOrderStatus, currentCurrencyRates, periodCurrencyRates);
-            OverviewReportResponse.OrderData deliveringOrdersData = getOrderData(deliveringOrderStatus, currentCurrencyRates, periodCurrencyRates);
-            OverviewReportResponse.CostData adCostData = getAdCostData(currentCurrencyRates, periodCurrencyRates);
-            OverviewReportResponse.ProfitData profitData = getProfitData(currentCurrencyRates, periodCurrencyRates);
+            ValidationUtils.validateTimeRange(request.getFrom(), request.getTo());
+            CurrencyCodeEnum currency = request.getCurrency();
+
+            // Get order status config
+            ReportSettingResponse config = configService.getConfig();
+
+            // Get date range
+            LocalDate from = request.getFrom();
+            LocalDate to = request.getTo();
+            LocalDate compareFrom = from.minusDays(request.getCompareWith().getDays());
+            LocalDate compareTo = to.minusDays(request.getCompareWith().getDays());
+
+            // Get order report data using the completed getOrderReport method
+            OverviewReportResponse orderReport = getOrderReport(currency, config, from, to, compareFrom, compareTo);
+
+            // Calculate ad cost data
+            OverviewReportResponse.CostData adCostData = calculateAdCostByDate(
+                    currency,
+                    orderReport.getTotalRevenue().getRevenue(),
+                    orderReport.getTotalRevenue().getPreviousRevenue(),
+                    from,
+                    to,
+                    compareFrom,
+                    compareTo
+            );
+            orderReport.setAdCost(adCostData);
+
+            // Calculate profit = true revenue - ad cost
+            BigDecimal currentProfit = orderReport.getProfit().getValue().subtract(adCostData.getCost());
+            BigDecimal previousProfit = orderReport.getProfit().getPreviousValue().subtract(adCostData.getPreviousCost());
+            BigDecimal profitChangePercent = ReportUtils.changePercent(currentProfit, previousProfit, percentScale);
+
+            // Update profit data with calculated values
+            OverviewReportResponse.ProfitData finalProfitData = OverviewReportResponse.ProfitData.builder()
+                    .value(currentProfit)
+                    .previousValue(previousProfit)
+                    .changePercent(profitChangePercent)
+                    .build();
+            orderReport.setProfit(finalProfitData);
+
 
             log.info("[OverviewReportServiceImpl.getOverviewReport] Successfully generated overview report for period {} to {}", request.getFrom(), request.getTo());
 
             return OverviewReportResponse.builder()
-                    .totalRevenue(totalRevenueData)
-                    .returnedOrders(returnedOrdersData)
-                    .confirmedOrders(confirmedOrdersData)
-                    .deliveringOrders(deliveringOrdersData)
+                    .totalRevenue(orderReport.getTotalRevenue())
+                    .returnedOrders(orderReport.getReturnedOrders())
+                    .confirmedOrders(orderReport.getConfirmedOrders())
+                    .deliveringOrders(orderReport.getDeliveringOrders())
                     .adCost(adCostData)
-                    .profit(profitData)
+                    .profit(finalProfitData)
                     .build();
+        } catch (ValidationException e) {
+            throw e;
         } catch (Exception e) {
             log.error("[OverviewReportServiceImpl.getOverviewReport] Failed to get overview report: {}", e.getMessage(), e);
             throw new TechnicalException(AlertMessages.alert(TechnicalAlertCode.OVERVIEW_REPORT_ERROR));
@@ -161,8 +190,9 @@ public class OverviewReportServiceImpl implements OverviewReportService {
     public BigDecimal getProfit(CurrencyRates currencyRates) {
         log.debug("[OverviewReportServiceImpl.getProfit] Calculating profit for period {} to {}", currencyRates.getFrom(), currencyRates.getTo());
 
+        ReportSettingResponse config = configService.getConfig();
         RevenueSummary revenueSummary = getOrderSummary(OrderStatus.getTotalOrdersStatus(), currencyRates);
-        RevenueSummary returnedOrdersSummary = getOrderSummary(OrderStatus.getReturnedOrdersStatus(), currencyRates);
+        RevenueSummary returnedOrdersSummary = getOrderSummary(config.getReturnOrderWhen().getOrderStatus(), currencyRates);
         RevenueSummary adsSummary = getAdsSummary(currencyRates);
 
         BigDecimal profit = revenueSummary.getRevenue()
@@ -172,58 +202,137 @@ public class OverviewReportServiceImpl implements OverviewReportService {
         return profit;
     }
 
-    private OverviewReportResponse.OrderData getOrderData(List<String> orderStatus,
-                                                          CurrencyRates currentCurrencyRates,
-                                                          CurrencyRates periodCurrencyRates) {
-        log.debug("[OverviewReportServiceImpl.getOrderData] Getting orders for statuses: {} | Current: {} to {} | Previous: {} to {}",
-                orderStatus, currentCurrencyRates.getFrom(), currentCurrencyRates.getTo(), periodCurrencyRates.getFrom(), periodCurrencyRates.getTo());
+    private OverviewReportResponse getOrderReport(CurrencyCodeEnum currency, ReportSettingResponse reportSetting, LocalDate startDate, LocalDate endDate, LocalDate compareStartDate, LocalDate compareEndDate) {
 
-        RevenueSummary currentOrders = getOrderSummary(orderStatus, currentCurrencyRates);
-        RevenueSummary previousOrders = getOrderSummary(orderStatus, periodCurrencyRates);
+        List<FullOrderQueryByDateModel> currentReport = orderCustomRepository.fullReportOrderByDate(claimUtil.getDepartmentId(), startDate, endDate, reportSetting.getConfirmOrderWhen(), reportSetting.getReturnOrderWhen());
+        List<FullOrderQueryByDateModel> previousReport = orderCustomRepository.fullReportOrderByDate(claimUtil.getDepartmentId(), compareStartDate, compareEndDate, reportSetting.getConfirmOrderWhen(), reportSetting.getReturnOrderWhen());
 
-        BigDecimal currentRevenue = currentOrders.getRevenue();
-        BigDecimal previousRevenue = previousOrders.getRevenue();
-        BigDecimal currentOrdersNumber = currentOrders.getNumber();
-        BigDecimal previousOrdersNumber = previousOrders.getNumber();
-        BigDecimal revenueChangePercent = ReportUtils.changePercent(currentRevenue, previousRevenue, percentScale);
-        BigDecimal ordersChangePercent = ReportUtils.changePercent(currentOrdersNumber, previousOrdersNumber, percentScale);
+        reportHelperService.exchangeRevenueForFullOrders(currentReport, currency, startDate, endDate);
+        reportHelperService.exchangeRevenueForFullOrders(previousReport, currency, compareStartDate, compareEndDate);
 
-        log.debug("[OverviewReportServiceImpl.getOrderData] Revenue: current={} previous={} change={}%; Orders: current={} previous={} change={}%",
-                currentOrders.getRevenue(), previousOrders.getRevenue(), revenueChangePercent,
-                currentOrders.getNumber(), previousOrders.getNumber(), ordersChangePercent);
+        // Aggregate current period data
+        long currentTotalOrders = currentReport.stream().mapToLong(FullOrderQueryByDateModel::getOrders).sum();
+        BigDecimal currentTotalRevenue = currentReport.stream().map(FullOrderQueryByDateModel::getRevenue).reduce(BigDecimal.ZERO, BigDecimal::add);
+        long currentConfirmedOrders = currentReport.stream().mapToLong(FullOrderQueryByDateModel::getConfirmedOrders).sum();
+        BigDecimal currentConfirmedRevenue = currentReport.stream().map(FullOrderQueryByDateModel::getConfirmedRevenue).reduce(BigDecimal.ZERO, BigDecimal::add);
+        long currentReturnedOrders = currentReport.stream().mapToLong(FullOrderQueryByDateModel::getReturnedOrders).sum();
+        BigDecimal currentReturnedRevenue = currentReport.stream().map(FullOrderQueryByDateModel::getReturnedRevenue).reduce(BigDecimal.ZERO, BigDecimal::add);
+        long currentDeliveringOrders = currentReport.stream().mapToLong(FullOrderQueryByDateModel::getDeliveringOrders).sum();
+        BigDecimal currentDeliveringRevenue = currentReport.stream().map(FullOrderQueryByDateModel::getDeliveringRevenue).reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal currentTrueRevenue = currentReport.stream().map(FullOrderQueryByDateModel::getTrueRevenue).reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        return OverviewReportResponse.OrderData.builder()
-                .revenue(currentRevenue)
-                .revenueChangePercent(revenueChangePercent)
-                .orders(currentOrdersNumber)
-                .ordersChangePercent(ordersChangePercent)
+        // Aggregate previous period data
+        long previousTotalOrders = previousReport.stream().mapToLong(FullOrderQueryByDateModel::getOrders).sum();
+        BigDecimal previousTotalRevenue = previousReport.stream().map(FullOrderQueryByDateModel::getRevenue).reduce(BigDecimal.ZERO, BigDecimal::add);
+        long previousConfirmedOrders = previousReport.stream().mapToLong(FullOrderQueryByDateModel::getConfirmedOrders).sum();
+        BigDecimal previousConfirmedRevenue = previousReport.stream().map(FullOrderQueryByDateModel::getConfirmedRevenue).reduce(BigDecimal.ZERO, BigDecimal::add);
+        long previousReturnedOrders = previousReport.stream().mapToLong(FullOrderQueryByDateModel::getReturnedOrders).sum();
+        BigDecimal previousReturnedRevenue = previousReport.stream().map(FullOrderQueryByDateModel::getReturnedRevenue).reduce(BigDecimal.ZERO, BigDecimal::add);
+        long previousDeliveringOrders = previousReport.stream().mapToLong(FullOrderQueryByDateModel::getDeliveringOrders).sum();
+        BigDecimal previousDeliveringRevenue = previousReport.stream().map(FullOrderQueryByDateModel::getDeliveringRevenue).reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal previousTrueRevenue = previousReport.stream().map(FullOrderQueryByDateModel::getTrueRevenue).reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        // Calculate change percentages
+        BigDecimal totalRevenueChangePercent = ReportUtils.changePercent(currentTotalRevenue, previousTotalRevenue, percentScale);
+        BigDecimal totalOrdersChangePercent = ReportUtils.changePercent(BigDecimal.valueOf(currentTotalOrders), BigDecimal.valueOf(previousTotalOrders), percentScale);
+        BigDecimal confirmedRevenueChangePercent = ReportUtils.changePercent(currentConfirmedRevenue, previousConfirmedRevenue, percentScale);
+        BigDecimal confirmedOrdersChangePercent = ReportUtils.changePercent(BigDecimal.valueOf(currentConfirmedOrders), BigDecimal.valueOf(previousConfirmedOrders), percentScale);
+        BigDecimal returnedRevenueChangePercent = ReportUtils.changePercent(currentReturnedRevenue, previousReturnedRevenue, percentScale);
+        BigDecimal returnedOrdersChangePercent = ReportUtils.changePercent(BigDecimal.valueOf(currentReturnedOrders), BigDecimal.valueOf(previousReturnedOrders), percentScale);
+        BigDecimal deliveringRevenueChangePercent = ReportUtils.changePercent(currentDeliveringRevenue, previousDeliveringRevenue, percentScale);
+        BigDecimal deliveringOrdersChangePercent = ReportUtils.changePercent(BigDecimal.valueOf(currentDeliveringOrders), BigDecimal.valueOf(previousDeliveringOrders), percentScale);
+
+        // Build OrderData objects
+        OverviewReportResponse.OrderData totalOrders = OverviewReportResponse.OrderData.builder()
+                .revenue(currentTotalRevenue)
+                .previousRevenue(previousTotalRevenue)
+                .revenueChangePercent(totalRevenueChangePercent)
+                .orders(currentTotalOrders)
+                .previousOrders(previousTotalOrders)
+                .ordersChangePercent(totalOrdersChangePercent)
+                .build();
+
+        OverviewReportResponse.OrderData confirmedOrders = OverviewReportResponse.OrderData.builder()
+                .revenue(currentConfirmedRevenue)
+                .previousRevenue(previousConfirmedRevenue)
+                .revenueChangePercent(confirmedRevenueChangePercent)
+                .orders(currentConfirmedOrders)
+                .previousOrders(previousConfirmedOrders)
+                .ordersChangePercent(confirmedOrdersChangePercent)
+                .build();
+
+        OverviewReportResponse.OrderData returnedOrders = OverviewReportResponse.OrderData.builder()
+                .revenue(currentReturnedRevenue)
+                .previousRevenue(previousReturnedRevenue)
+                .revenueChangePercent(returnedRevenueChangePercent)
+                .orders(currentReturnedOrders)
+                .previousOrders(previousReturnedOrders)
+                .ordersChangePercent(returnedOrdersChangePercent)
+                .build();
+
+        OverviewReportResponse.OrderData deliveringOrders = OverviewReportResponse.OrderData.builder()
+                .revenue(currentDeliveringRevenue)
+                .previousRevenue(previousDeliveringRevenue)
+                .revenueChangePercent(deliveringRevenueChangePercent)
+                .orders(currentDeliveringOrders)
+                .previousOrders(previousDeliveringOrders)
+                .ordersChangePercent(deliveringOrdersChangePercent)
+                .build();
+
+        BigDecimal trueRevenueChangePercent = ReportUtils.changePercent(currentTrueRevenue, previousTrueRevenue, percentScale);
+
+        OverviewReportResponse.ProfitData profitData = OverviewReportResponse.ProfitData.builder()
+                .value(currentTrueRevenue)
+                .previousValue(previousTrueRevenue)
+                .changePercent(trueRevenueChangePercent)
+                .build();
+
+        return OverviewReportResponse.builder()
+                .totalRevenue(totalOrders)
+                .confirmedOrders(confirmedOrders)
+                .returnedOrders(returnedOrders)
+                .deliveringOrders(deliveringOrders)
+                .profit(profitData)
                 .build();
     }
 
-
-    private OverviewReportResponse.ProfitData getProfitData(CurrencyRates currentCurrencyRates,
-                                                            CurrencyRates periodCurrencyRates) {
-        // Lợi nhuận hiện tại & trước đó
-        BigDecimal currentProfit = getProfit(currentCurrencyRates);
-        BigDecimal previousProfit = getProfit(periodCurrencyRates);
-
-        // % thay đổi lợi nhuận
-        BigDecimal profitChangePercent = ReportUtils.changePercent(currentProfit, previousProfit, percentScale);
-
-        return OverviewReportResponse.ProfitData.builder()
-                .value(currentProfit)
-                .changePercent(profitChangePercent)
+    private BigDecimal getAdsCostByDate(CurrencyCodeEnum currency, LocalDate startDate, LocalDate endDate) {
+        AdsCostOfDepartmentRequest adsCostOfDepartmentRequest = AdsCostOfDepartmentRequest.builder()
+                .companyId(claimUtil.getCompanyId())
+                .departmentId(claimUtil.getDepartmentId())
+                .startDate(startDate)
+                .endDate(endDate)
+                .currency(currency.name())
                 .build();
+        AdsCostResponse response = adsManagerClient.getAdsCostOfDepartment(adsCostOfDepartmentRequest).getBody();
+        if (Objects.isNull(response)) {
+            log.error("[getAdsCostByDate] response is null");
+            throw new TechnicalException(AlertMessages.alert(TechnicalAlertCode.SYSTEM_ERROR));
+        }
+        return response.getAdCostByDate().stream()
+                .map(AdCostByDate::getSpent)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
-    private OverviewReportResponse.CostData getAdCostData(CurrencyRates currentCurrencyRates,
-                                                          CurrencyRates periodCurrencyRates) {
-        // TODO: code CostData
+    private OverviewReportResponse.CostData calculateAdCostByDate(CurrencyCodeEnum currency, BigDecimal currentRevenue, BigDecimal previousRevenue, LocalDate startDate, LocalDate endDate, LocalDate compareStartDate, LocalDate compareEndDate) {
+        BigDecimal currentAdCost = getAdsCostByDate(currency, startDate, endDate);
+        BigDecimal previousAdCost = getAdsCostByDate(currency, compareStartDate, compareEndDate);
+
+        // Calculate percentage change in ad cost
+        BigDecimal adCostChangePercent = ReportUtils.changePercent(currentAdCost, previousAdCost, percentScale);
+
+        // Calculate ad cost per revenue
+        BigDecimal currentAdCostPerRevenue = BigDecimal.valueOf(reportHelperService.calculateAdCostPerRevenue(currentAdCost, currentRevenue));
+        BigDecimal previousAdCostPerRevenue = BigDecimal.valueOf(reportHelperService.calculateAdCostPerRevenue(previousAdCost, previousRevenue));
+        BigDecimal adCostPerRevenueChangePercent = ReportUtils.changePercent(currentAdCostPerRevenue, previousAdCostPerRevenue, percentScale);
+
         return OverviewReportResponse.CostData.builder()
-                .cost(BigDecimal.ZERO)
-                .costChangePercent(BigDecimal.ZERO)
-                .adCostPerRevenue(BigDecimal.ZERO)
-                .adCostPerRevenueChangePercent(BigDecimal.ZERO)
+                .cost(currentAdCost)
+                .previousCost(previousAdCost)
+                .costChangePercent(adCostChangePercent)
+                .adCostPerRevenue(currentAdCostPerRevenue)
+                .previousAdCostPerRevenue(previousAdCostPerRevenue)
+                .adCostPerRevenueChangePercent(adCostPerRevenueChangePercent)
                 .build();
     }
 }

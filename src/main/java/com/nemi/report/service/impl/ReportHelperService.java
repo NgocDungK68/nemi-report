@@ -3,6 +3,7 @@ package com.nemi.report.service.impl;
 import com.nemi.constant.CurrencyCodeEnum;
 import com.nemi.report.model.config.ColumnConfig;
 import com.nemi.report.model.config.SummaryData;
+import com.nemi.report.model.pojo.FullOrderQueryByDateModel;
 import com.nemi.report.model.pojo.OrderQueryByDateModel;
 import com.nemi.report.model.pojo.ReportByDateModel;
 import com.nemi.report.model.pojo.ReportModel;
@@ -44,6 +45,19 @@ public class ReportHelperService {
 
         Map<String, BigDecimal> rateByDateMap = buildExchangeRateMap(exchangeRateResponse);
         applyExchangeRatesToOrders(orderQueryModel, rateByDateMap, currency);
+    }
+
+    public void exchangeRevenueForFullOrders(List<FullOrderQueryByDateModel> orderQueryModel, CurrencyCodeEnum currency, LocalDate startDate, LocalDate endDate) {
+        ExchangeRateResponse exchangeRateResponse = exchangeRateService.getExchangeRate(
+                claimUtil.getCompanyId(),
+                CurrencyCodeEnum.VND.name(),
+                currency.name(),
+                startDate,
+                endDate
+        );
+
+        Map<String, BigDecimal> rateByDateMap = buildExchangeRateMap(exchangeRateResponse);
+        applyExchangeRatesToFullOrders(orderQueryModel, rateByDateMap, currency);
     }
 
     public <T extends ReportModel> Object getValueFromReportModel(T reportModel, String code) {
@@ -213,6 +227,29 @@ public class ReportHelperService {
             }
             if (order.getTrueRevenue() != null) {
                 order.setTrueRevenue(CurrencyUtils.exchange(currency, order.getTrueRevenue(), rate));
+            }
+        });
+    }
+
+    private void applyExchangeRatesToFullOrders(List<FullOrderQueryByDateModel> orderQueryModel, Map<String, BigDecimal> rateByDateMap, CurrencyCodeEnum currency) {
+        orderQueryModel.forEach(order -> {
+            BigDecimal rate = rateByDateMap.getOrDefault(order.getReportDate(), BigDecimal.ONE);
+
+            // Apply exchange rate to all revenue fields
+            if (order.getRevenue() != null) {
+                order.setRevenue(CurrencyUtils.exchange(currency, order.getRevenue(), rate));
+            }
+            if (order.getTrueRevenue() != null) {
+                order.setTrueRevenue(CurrencyUtils.exchange(currency, order.getTrueRevenue(), rate));
+            }
+            if (order.getConfirmedRevenue() != null) {
+                order.setConfirmedRevenue(CurrencyUtils.exchange(currency, order.getConfirmedRevenue(), rate));
+            }
+            if (order.getReturnedRevenue() != null) {
+                order.setReturnedRevenue(CurrencyUtils.exchange(currency, order.getReturnedRevenue(), rate));
+            }
+            if (order.getDeliveringRevenue() != null) {
+                order.setDeliveringRevenue(CurrencyUtils.exchange(currency, order.getDeliveringRevenue(), rate));
             }
         });
     }

@@ -40,11 +40,17 @@ public class OverviewReportResponse {
         @JsonProperty("revenue")
         private BigDecimal revenue;
 
+        @JsonProperty("previousRevenue")
+        private BigDecimal previousRevenue;
+
         @JsonProperty("revenueChangePercent")
         private BigDecimal revenueChangePercent;
 
         @JsonProperty("orders")
-        private BigDecimal orders;
+        private Long orders;
+
+        @JsonProperty("previousOrders")
+        private Long previousOrders;
 
         @JsonProperty("ordersChangePercent")
         private BigDecimal ordersChangePercent;
@@ -58,11 +64,17 @@ public class OverviewReportResponse {
         @JsonProperty("cost")
         private BigDecimal cost;
 
+        @JsonProperty("previousCost")
+        private BigDecimal previousCost;
+
         @JsonProperty("costChangePercent")
         private BigDecimal costChangePercent;
 
         @JsonProperty("adCostPerRevenue")
         private BigDecimal adCostPerRevenue;
+
+        @JsonProperty("previousAdCostPerRevenue")
+        private BigDecimal previousAdCostPerRevenue;
 
         @JsonProperty("adCostPerRevenueChangePercent")
         private BigDecimal adCostPerRevenueChangePercent;
@@ -75,6 +87,9 @@ public class OverviewReportResponse {
     public static class ProfitData {
         @JsonProperty("value")
         private BigDecimal value;
+
+        @JsonProperty("previousValue")
+        private BigDecimal previousValue;
 
         @JsonProperty("changePercent")
         private BigDecimal changePercent;

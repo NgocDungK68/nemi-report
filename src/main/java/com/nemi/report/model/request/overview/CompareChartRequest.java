@@ -26,5 +26,5 @@ public class CompareChartRequest {
     private Currency currency; // VND/USD
 
     @NotNull
-    private OverviewDataType dataType; // REVENUE, AD_COST, AD_COST_PER_REVENUE, RETURNED_ORDER, PROFIT
+    private OverviewDataType dataType;
 }
