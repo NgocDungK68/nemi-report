@@ -161,7 +161,7 @@ public class OverviewReportServiceImpl implements OverviewReportService {
         }
 
         return RevenueSummary.builder()
-                .revenue(revenue)
+                .revenue(revenue.stripTrailingZeros())
                 .number(numberOfOrders)
                 .build();
     }
