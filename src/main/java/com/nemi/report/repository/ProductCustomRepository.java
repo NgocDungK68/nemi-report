@@ -71,15 +71,9 @@ public class ProductCustomRepository {
 
             if (ObjectUtils.isNotEmpty(productId)) {
                 sql.append(", TO_CHAR(oi.created_at, 'YYYY-MM-DD') as created_at ");
+            } else {
+                sql.append(", TO_CHAR(p.created_at, 'YYYY-MM-DD') as created_at ");
             }
-
-//            if (adsTab.equals(AdsTab.AD_ACCOUNT)) {
-//                sql.append(", a.account_status as status_account, a.currency as currency_default ");
-//            } else if (adsTab.equals(AdsTab.CAMPAIGN)) {
-//                sql.append(", a.status, MAX(ac.account_status) as status_account, MAX(ac.currency) as currency_default, a.objective as objective_default ");
-//            } else {
-//                sql.append(", p.status, MAX(ac.account_status) as status_account, MAX(ac.currency) as currency_default, a.campaign ->> 'objective' as objective_default ");
-//            }
 
             buildSelectAndFromAndWhereClause(sql, columns, queryParameters, productId);
 

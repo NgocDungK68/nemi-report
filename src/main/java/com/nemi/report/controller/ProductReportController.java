@@ -1,12 +1,13 @@
 package com.nemi.report.controller;
 
+import com.nemi.annotation.RequirePermission;
 import com.nemi.report.model.request.ReportSummaryRequest;
 import com.nemi.report.model.request.product.ProductChartRequest;
 import com.nemi.report.model.response.product.ProductChartResponse;
 import com.nemi.report.model.response.product.ProductDailyResponse;
 import com.nemi.report.model.response.product.ProductSummaryResponse;
 import com.nemi.report.model.response.product.ProductsChartResponse;
-import com.nemi.report.service.ProductSummaryService;
+import com.nemi.report.service.ProductReportService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -21,39 +22,41 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class ProductReportController {
 
-    private final ProductSummaryService productSummaryService;
+//    private final ProductSummaryService productSummaryService;
+    private final ProductReportService productReportService;
 
     @PostMapping
+    @RequirePermission("REPORTING.PRODUCT_REPORT.VIEW")
     public ResponseEntity<ProductSummaryResponse> getProductSummary(@Valid @RequestBody ReportSummaryRequest request) {
 
-        ProductSummaryResponse response = productSummaryService.getProductSummary(request);
+        ProductSummaryResponse response = productReportService.getProductSummary(request);
         return ResponseEntity.ok(response);
     }
 
-//    @RequirePermission("REPORTING.PRODUCT_REPORT.VIEW")
+    @RequirePermission("REPORTING.PRODUCT_REPORT.VIEW")
     @PostMapping("/{productId}")
     public ResponseEntity<ProductDailyResponse> getProductSummary(
             @PathVariable(name = "productId") String productId,
             @RequestBody ReportSummaryRequest request
     ) {
-        ProductDailyResponse response = productSummaryService.getProductDaily(request, productId);
+        ProductDailyResponse response = productReportService.getProductDaily(productId, request);
         return ResponseEntity.ok(response);
     }
-
-//    @RequirePermission("REPORTING.PRODUCT_REPORT.VIEW")
+//
+    @RequirePermission("REPORTING.PRODUCT_REPORT.VIEW")
     @PostMapping("/products-chart")
     public ResponseEntity<ProductsChartResponse> getProductsChart(@RequestBody ProductChartRequest request) {
-        ProductsChartResponse response = productSummaryService.getAllProductsChart(request);
+        ProductsChartResponse response = productReportService.getAllProductsChart(request);
         return ResponseEntity.ok(response);
     }
-
-//    @RequirePermission("REPORTING.PRODUCT_REPORT.VIEW")
+//
+    @RequirePermission("REPORTING.PRODUCT_REPORT.VIEW")
     @PostMapping("/product-chart/{productId}")
     public ResponseEntity<ProductChartResponse> getProductChart(
             @PathVariable(name = "productId") String productId,
             @RequestBody ProductChartRequest request
     ) {
-        ProductChartResponse response = productSummaryService.getProductChart(productId, request);
+        ProductChartResponse response = productReportService.getProductChart(productId, request);
         return ResponseEntity.ok(response);
     }
 }

@@ -12,10 +12,7 @@ import java.time.LocalDate;
 @Data
 public class ProductChartRequest {
     @NotNull
-    private ReportChartType chartData;
-
-    @NotNull
-    private CurrencyCodeEnum currency;
+    private CurrencyCodeEnum currency; // VND/USD
 
     @NotNull
     @JsonFormat(pattern = "yyyy-MM-dd")
@@ -26,8 +23,9 @@ public class ProductChartRequest {
     private LocalDate endDate;
 
     @NotNull
+    private ReportChartType chartData;
+
     private boolean splitByDate = false;
 
-    @NotNull
     private Limit limit = Limit.TOP5;
 }

@@ -1,5 +1,6 @@
 package com.nemi.report.controller;
 
+import com.nemi.annotation.RequirePermission;
 import com.nemi.report.model.request.ReportSummaryRequest;
 import com.nemi.report.model.request.staff.StaffChartRequest;
 import com.nemi.report.model.response.staff.StaffChartResponse;
@@ -22,7 +23,7 @@ public class StaffReportController {
 
     private final StaffReportService staffReportService;
 
-    //    @RequirePermission("REPORTING.STAFF_REPORT.VIEW")
+    @RequirePermission("REPORTING.STAFF_REPORT.VIEW")
     @PostMapping
     public ResponseEntity<StaffSummaryResponse> getStaffSummary(@RequestBody ReportSummaryRequest request) {
         StaffSummaryResponse response = staffReportService.getStaffReportSummary(request);
@@ -30,7 +31,7 @@ public class StaffReportController {
         return ResponseEntity.ok(response);
     }
 
-    //    @RequirePermission("REPORTING.STAFF_REPORT.VIEW")
+    @RequirePermission("REPORTING.STAFF_REPORT.VIEW")
     @PostMapping("/{staffId}")
     public ResponseEntity<StaffDailyResponse> getStaffSummary(
             @PathVariable(name = "staffId") String staffId,
@@ -39,14 +40,14 @@ public class StaffReportController {
         return ResponseEntity.ok(response);
     }
 
-//    @RequirePermission("REPORTING.STAFF_REPORT.VIEW")
+    @RequirePermission("REPORTING.STAFF_REPORT.VIEW")
     @PostMapping("/staffs-chart")
     public ResponseEntity<StaffsChartResponse> getStaffsChart(@RequestBody StaffChartRequest request) {
         StaffsChartResponse response = staffReportService.getAllStaffsChart(request);
         return ResponseEntity.ok(response);
     }
 
-//    @RequirePermission("REPORTING.STAFF_REPORT.VIEW")
+    @RequirePermission("REPORTING.STAFF_REPORT.VIEW")
     @PostMapping("/staff-chart/{userId}")
     public ResponseEntity<StaffChartResponse> getStaffChart(
             @PathVariable(name = "userId") String userId,

@@ -131,6 +131,7 @@ nemi:
               mapping: ad_cost_per_revenue
               hasFilter: true
               summary-type: AVG
+
     marketing-report:
       default-columns:
         - revenue
@@ -241,7 +242,8 @@ nemi:
               source: ADS
               is-cost: true
               mapping: ad_cost
-              hasFilter: true
+              hasFilter: false
+              has-order: false
               summary-type: SUM
 
             - code: ad_cost_per_order
@@ -251,7 +253,8 @@ nemi:
               source: ADS
               is-cost: true
               mapping: ad_cost_per_order
-              hasFilter: true
+              hasFilter: false
+              has-order: false
               summary-type: AVG
 
             - code: ads_cost_per_confirmed_order
@@ -261,7 +264,8 @@ nemi:
               source: ADS
               is-cost: true
               mapping: ads_cost_per_confirmed_order
-              hasFilter: true
+              hasFilter: false
+              has-order: false
               summary-type: AVG
 
             - code: ad_cost_per_revenue
@@ -271,7 +275,162 @@ nemi:
               source: ADS
               is-percent: true
               mapping: ad_cost_per_revenue
+              hasFilter: false
+              has-order: false
+              summary-type: AVG
+
+    product:
+      default-columns:
+        - revenue
+        - orders
+        - ad_cost
+        - ad_cost_to_revenue
+        - ad_cost_per_order
+        - confirmed_orders
+        - returned_orders
+        - successful_orders
+        - profit
+
+      system-views:
+        - code: performance
+          title-en: "Product Performance"
+          title-vi: "Hiệu quả sản phẩm"
+          columns:
+            - product_name
+            - revenue
+            - orders
+            - ad_cost
+            - ad_cost_to_revenue
+            - ad_cost_per_order
+            - confirmed_orders
+            - returned_orders
+            - successful_orders
+            - profit
+      column-categories:
+        - categoryNameEn: "Revenue"
+          categoryNameVi: "Doanh số"
+          columns:
+            - code: revenue
+              titleEn: "Revenue"
+              titleVi: "Doanh số"
+              type: DECIMAL
+              source: ORDER
+              is-cost: true
+              mapping: revenue
               hasFilter: true
+              has-order: true
+              summary-type: SUM
+
+            - code: profit
+              titleEn: "Profit"
+              titleVi: "Lợi nhuận"
+              type: DECIMAL
+              source: ORDER
+              is-cost: true
+              mapping: profit
+              hasFilter: true
+              has-order: true
+              summary-type: SUM
+
+            - code: true_revenue
+              titleEn: "True revenue"
+              titleVi: "Doanh thu"
+              type: DECIMAL
+              source: ORDER
+              is-cost: true
+              mapping: true_revenue
+              hasFilter: true
+              has-order: true
+              summary-type: SUM
+
+        - categoryNameEn: "Orders"
+          categoryNameVi: "Đơn hàng"
+          columns:
+            - code: orders
+              titleEn: "Orders"
+              titleVi: "Đơn hàng"
+              type: INTEGER
+              source: ORDER
+              mapping: orders
+              hasFilter: true
+              has-order: true
+              summary-type: SUM
+
+            - code: confirmed_orders
+              titleEn: "Confirmed orders"
+              titleVi: "Đơn chốt"
+              type: INTEGER
+              source: ORDER
+              mapping: confirmed_orders
+              hasFilter: true
+              has-order: true
+              summary-type: SUM
+
+            - code: returned_orders
+              titleEn: "Returned orders"
+              titleVi: "Đơn hoàn"
+              type: INTEGER
+              source: ORDER
+              mapping: returned_orders
+              hasFilter: true
+              has-order: true
+              summary-type: SUM
+
+            - code: success_orders
+              titleEn: "Success order"
+              titleVi: "Đơn thành công"
+              type: INTEGER
+              source: ORDER
+              mapping: success_orders
+              hasFilter: true
+              has-order: true
+              summary-type: SUM
+
+        - categoryNameEn: "Cost"
+          categoryNameVi: "Chi phí"
+          columns:
+            - code: ad_cost
+              titleEn: "Ads cost"
+              titleVi: "Chi phí QC"
+              type: DECIMAL
+              source: ADS
+              is-cost: true
+              mapping: ad_cost
+              hasFilter: false
+              has-order: false
+              summary-type: SUM
+
+            - code: ad_cost_per_order
+              titleEn: "Ads cost/Order"
+              titleVi: "CPQC/Đơn hàng"
+              type: DECIMAL
+              source: ADS
+              is-cost: true
+              mapping: ad_cost_per_order
+              hasFilter: false
+              has-order: false
+              summary-type: AVG
+
+            - code: ads_cost_per_confirmed_order
+              titleEn: "Ads cost/Confirmed order"
+              titleVi: "CPQC/Đơn chốt"
+              type: DECIMAL
+              source: ADS
+              is-cost: true
+              mapping: ads_cost_per_confirmed_order
+              hasFilter: false
+              has-order: false
+              summary-type: AVG
+
+            - code: ad_cost_per_revenue
+              titleEn: "Ads cost/Revenue"
+              titleVi: "CPQC/Doanh số"
+              type: DECIMAL
+              source: ADS
+              is-percent: true
+              mapping: ad_cost_per_revenue
+              hasFilter: false
+              has-order: false
               summary-type: AVG
 
     staff-report:
@@ -427,6 +586,7 @@ nemi:
               hasFilter: false
               has-order: false
               summary-type: AVG
+
     product-report:
       default-columns:
         - revenue

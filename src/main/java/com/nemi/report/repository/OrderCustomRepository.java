@@ -6,6 +6,7 @@ import com.nemi.report.constant.ReturnOrderWhen;
 import com.nemi.report.model.pojo.OrderQueryByDateModel;
 import com.nemi.report.model.pojo.OrderQueryByProductModel;
 import com.nemi.report.model.pojo.OrderQueryByUserModel;
+import com.nemi.report.model.pojo.OrderSumModel;
 import com.nemi.report.model.request.ColumnRequest;
 import com.nemi.report.model.request.FilterRequest;
 import com.nemi.report.util.QueryResolver;
@@ -14,6 +15,7 @@ import jakarta.persistence.Query;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -55,7 +57,7 @@ public class OrderCustomRepository {
                     FROM product_manager.orders o
                          left join product_manager.pos p on o.pos_id = p.id
                     WHERE p.department_id = :department_id
-                        and p.status <> ('ACTIVE', 'PROCESSING')
+                        and p.status in ('ACTIVE', 'PROCESSING')
                         AND o.created_at >= :start_date
                         AND o.created_at < :end_date
                     GROUP BY TO_CHAR(o.created_at, 'DD/MM/YYYY'), o.status
@@ -177,8 +179,8 @@ public class OrderCustomRepository {
     }
 
     public List<OrderQueryByDateModel> reportOrderByDateOfUser(String departmentId, String userId,
-                                                         LocalDate startDate, LocalDate endDate,
-                                                         ConfirmOrderWhen confirmOrderWhen, ReturnOrderWhen returnOrderWhen) {
+                                                               LocalDate startDate, LocalDate endDate,
+                                                               ConfirmOrderWhen confirmOrderWhen, ReturnOrderWhen returnOrderWhen) {
         List<String> confirmedStatus = confirmOrderWhen.getOrderStatus();
         List<String> returnedStatus = returnOrderWhen.getOrderStatus();
         List<String> confirmedStatusWithoutReturned = confirmedStatus.stream().filter(s -> !StringUtils.equals(s, OrderStatus.RETURNED.name())).toList();
@@ -233,7 +235,7 @@ public class OrderCustomRepository {
                 .toList();
     }
 
-    public List<OrderQueryByProductModel> reportOrderByProduct(String departmentId,
+    public List<OrderQueryByProductModel> reportOrderByProduct(String departmentId, PageRequest pageRequest,
                                                                LocalDate startDate, LocalDate endDate,
                                                                List<ColumnRequest> orders, List<FilterRequest> filters,
                                                                ConfirmOrderWhen confirmOrderWhen, ReturnOrderWhen returnOrderWhen) {
@@ -242,29 +244,36 @@ public class OrderCustomRepository {
         List<String> confirmedStatusWithoutReturned = confirmedStatus.stream().filter(s -> !StringUtils.equals(s, OrderStatus.RETURNED.name())).toList();
 
         StringBuilder queryString = new StringBuilder("""
-                SELECT p.product_id AS product_id,
-                       p.name,
-                       p.images     AS image,
-                       COUNT(o.order_id)                                                                         AS orders,
-                       SUM(CASE WHEN o.status IN :confirmed_status THEN 1 ELSE 0 END)                            AS confirmed_orders,
-                       SUM(CASE WHEN o.status IN :returned_status THEN 1 ELSE 0 END)                             AS returned_orders,
-                       SUM(CASE WHEN o.status IN :success_status THEN 1 ELSE 0 END)                              AS success_orders,
-                       SUM(CASE WHEN o.status IN :confirmed_status THEN COALESCE(oi.total_price, 0) ELSE 0 END)  AS revenue,
-                       SUM(CASE WHEN o.status in :confirmed_status_without_returned
-                                   THEN COALESCE(oi.total_price, 0)
-                               ELSE 0 END)                                                                       AS true_revenue
-                FROM product_manager.products p
-                         LEFT JOIN product_manager.order_item oi
-                                   ON oi.pos_id = p.pos_id AND oi.product_id = p.product_id
-                         LEFT JOIN product_manager.orders o
-                                   ON o.order_id = oi.order_id
-                                  AND o.department_id = :department_id
-                                  AND o.created_at >= :start_date
-                                  AND o.created_at < :end_date
-                         LEFT JOIN product_manager.pos pos
-                                   ON pos.id = o.pos_id
-                                  AND pos.status IN ('ACTIVE', 'PROCESSING')
-                WHERE p.department_id = :department_id
+                select *
+                from (select product_id,
+                             product_name,
+                             product_images,
+                             SUM(s.total)                                                           AS orders,
+                             SUM(CASE WHEN s.status in :confirmed_status THEN s.total ELSE 0 END)   AS confirmed_orders,
+                             SUM(CASE WHEN s.status in :returned_status THEN s.total ELSE 0 END)    AS returned_orders,
+                             SUM(CASE WHEN s.status in :success_status THEN s.total ELSE 0 END)     AS success_orders,
+                             SUM(CASE WHEN s.status in :confirmed_status THEN s.revenue ELSE 0 END) AS revenue,
+                             SUM(CASE
+                                     WHEN s.status in :confirmed_status_without_returned
+                                         THEN s.revenue
+                                     ELSE 0 END)                                                    AS true_revenue
+                      from (select p.product_id        as product_id,
+                                   p.name              as product_name,
+                                   p.images            as product_images,
+                                   o.status,
+                                   COUNT(1)            AS total,
+                                   SUM(oi.total_price) AS revenue
+                            from product_manager.products p
+                                     left join product_manager.pos pos on p.pos_id = pos.id
+                                     left join product_manager.order_item oi on oi.product_id = p.product_id
+                                     left join product_manager.orders o on oi.order_id = o.order_id
+                            where pos.department_id = :department_id
+                              and pos.status in ('ACTIVE', 'PROCESSING')
+                              and o.created_at >= :start_date
+                              and o.created_at < :end_date
+                            group by p.product_id, p.name, p.images, o.status) s
+                      group by s.product_id, s.product_name, s.product_images) data
+                where 1 = 1
                 """);
 
         // append filter if present
@@ -273,16 +282,18 @@ public class OrderCustomRepository {
             queryString.append(QueryResolver.toWhereClause(TEMP_TABLE, filters));
         }
 
+        queryString.append(" group by data.product_id, data.product_name, data.product_images, data.orders, data.confirmed_orders, data.returned_orders, data.success_orders, data.revenue, data.true_revenue ");
+
         // append order if present
         if (!orders.isEmpty()) {
-            queryString.append(" ORDER BY ");
+            queryString.append(" order by ");
             queryString.append(QueryResolver.toOrderClause(TEMP_TABLE, orders));
         }
 
-        queryString.append("GROUP BY p.product_id, p.name, p.image");
-
         // create query and pagination
         Query query = createNativeQuery(departmentId, startDate, endDate, confirmedStatus, returnedStatus, confirmedStatusWithoutReturned, queryString.toString());
+        query.setFirstResult(pageRequest.getPageNumber() * pageRequest.getPageSize());
+        query.setMaxResults(pageRequest.getPageSize());
 
         @SuppressWarnings("unchecked")
         List<Object[]> results = query.getResultList();
@@ -302,6 +313,163 @@ public class OrderCustomRepository {
                 .toList();
     }
 
+    public Long reportCountOrderByProduct(String departmentId,
+                                          LocalDate startDate, LocalDate endDate,
+                                          List<ColumnRequest> orders, List<FilterRequest> filters,
+                                          ConfirmOrderWhen confirmOrderWhen, ReturnOrderWhen returnOrderWhen) {
+        List<String> confirmedStatus = confirmOrderWhen.getOrderStatus();
+        List<String> returnedStatus = returnOrderWhen.getOrderStatus();
+        List<String> confirmedStatusWithoutReturned = confirmedStatus.stream().filter(s -> !StringUtils.equals(s, OrderStatus.RETURNED.name())).toList();
+
+        StringBuilder queryString = new StringBuilder("""
+                select count(1) from (select *
+                from (select product_id,
+                             product_name,
+                             product_images,
+                             SUM(s.total)                                                           AS orders,
+                             SUM(CASE WHEN s.status in :confirmed_status THEN s.total ELSE 0 END)   AS confirmed_orders,
+                             SUM(CASE WHEN s.status in :returned_status THEN s.total ELSE 0 END)    AS returned_orders,
+                             SUM(CASE WHEN s.status in :success_status THEN s.total ELSE 0 END)     AS success_orders,
+                             SUM(CASE WHEN s.status in :confirmed_status THEN s.revenue ELSE 0 END) AS revenue,
+                             SUM(CASE
+                                     WHEN s.status in :confirmed_status_without_returned
+                                         THEN s.revenue
+                                     ELSE 0 END)                                                    AS true_revenue
+                      from (select p.product_id        as product_id,
+                                   p.name              as product_name,
+                                   p.images            as product_images,
+                                   o.status,
+                                   COUNT(1)            AS total,
+                                   SUM(oi.total_price) AS revenue
+                            from product_manager.products p
+                                     left join product_manager.pos pos on p.pos_id = pos.id
+                                     left join product_manager.order_item oi on oi.product_id = p.product_id
+                                     left join product_manager.orders o on oi.order_id = o.order_id
+                            where pos.department_id = :department_id
+                              and pos.status in ('ACTIVE', 'PROCESSING')
+                              and o.created_at >= :start_date
+                              and o.created_at < :end_date
+                            group by p.product_id, p.name, p.images, o.status) s
+                      group by s.product_id, s.product_name, s.product_images) data
+                where 1 = 1
+                """);
+
+        // append filter if present
+        if (!filters.isEmpty()) {
+            queryString.append(" AND ");
+            queryString.append(QueryResolver.toWhereClause(TEMP_TABLE, filters));
+        }
+
+        queryString.append(" group by data.product_id, data.product_name, data.product_images, data.orders, data.confirmed_orders, data.returned_orders, data.success_orders, data.revenue, data.true_revenue ");
+
+        // append order if present
+        if (!orders.isEmpty()) {
+            queryString.append(" order by ");
+            queryString.append(QueryResolver.toOrderClause(TEMP_TABLE, orders));
+        }
+
+        // end script
+        queryString.append(" ) final;");
+
+        // create query and pagination
+        Query query = createNativeQuery(departmentId, startDate, endDate, confirmedStatus, returnedStatus, confirmedStatusWithoutReturned, queryString.toString());
+
+        return (Long) query.getSingleResult();
+    }
+
+    public OrderSumModel reportSumOrderByProduct(String departmentId,
+                                                 LocalDate startDate, LocalDate endDate,
+                                                 List<ColumnRequest> orders, List<FilterRequest> filters,
+                                                 ConfirmOrderWhen confirmOrderWhen, ReturnOrderWhen returnOrderWhen) {
+        List<String> confirmedStatus = confirmOrderWhen.getOrderStatus();
+        List<String> returnedStatus = returnOrderWhen.getOrderStatus();
+        List<String> confirmedStatusWithoutReturned = confirmedStatus.stream().filter(s -> !StringUtils.equals(s, OrderStatus.RETURNED.name())).toList();
+
+        StringBuilder queryString = new StringBuilder("""
+                select SUM(final.orders)           as orders,
+                       SUM(final.confirmed_orders) as confirmed_orders,
+                       SUM(final.returned_orders)  as returned_orders,
+                       SUM(final.success_orders)   as success_orders,
+                       SUM(final.revenue)          as revenue,
+                       SUM(final.true_revenue)     as true_revenue
+                from (select *
+                      from (select product_id,
+                                   product_name,
+                                   product_images,
+                                   SUM(s.total)                                                           AS orders,
+                                   SUM(CASE WHEN s.status in :confirmed_status THEN s.total ELSE 0 END)   AS confirmed_orders,
+                                   SUM(CASE WHEN s.status in :returned_status THEN s.total ELSE 0 END)    AS returned_orders,
+                                   SUM(CASE WHEN s.status in :success_status THEN s.total ELSE 0 END)     AS success_orders,
+                                   SUM(CASE WHEN s.status in :confirmed_status THEN s.revenue ELSE 0 END) AS revenue,
+                                   SUM(CASE
+                                           WHEN s.status in :confirmed_status_without_returned
+                                               THEN s.revenue
+                                           ELSE 0 END)                                                    AS true_revenue
+                            from (select p.product_id        as product_id,
+                                         p.name              as product_name,
+                                         p.images            as product_images,
+                                         o.status,
+                                         COUNT(1)            AS total,
+                                         SUM(oi.total_price) AS revenue
+                                  from product_manager.products p
+                                           left join product_manager.pos pos on p.pos_id = pos.id
+                                           left join product_manager.order_item oi on oi.product_id = p.product_id
+                                           left join product_manager.orders o on oi.order_id = o.order_id
+                                  where pos.department_id = :department_id
+                                    and pos.status in ('ACTIVE', 'PROCESSING')
+                                    and o.created_at >= :start_date
+                                    and o.created_at < :end_date
+                                  group by p.product_id, p.name, p.images, o.status) s
+                            group by s.product_id, s.product_name, s.product_images) data
+                      where 1 = 1
+                """);
+
+        // append filter if present
+        if (!filters.isEmpty()) {
+            queryString.append(" AND ");
+            queryString.append(QueryResolver.toWhereClause(TEMP_TABLE, filters));
+        }
+
+        queryString.append(" group by data.product_id, data.product_name, data.product_images, data.orders, data.confirmed_orders, data.returned_orders, data.success_orders, data.revenue, data.true_revenue ");
+
+        // append order if present
+        if (!orders.isEmpty()) {
+            queryString.append(" order by ");
+            queryString.append(QueryResolver.toOrderClause(TEMP_TABLE, orders));
+        }
+
+        // end script
+        queryString.append(" ) final;");
+
+        // create query and pagination
+        Query query = createNativeQuery(departmentId, startDate, endDate, confirmedStatus, returnedStatus, confirmedStatusWithoutReturned, queryString.toString());
+
+        @SuppressWarnings("unchecked")
+        List<Object[]> results = query.getResultList();
+
+        if (results.isEmpty()) {
+            OrderSumModel emptyModel = new OrderSumModel();
+            emptyModel.setOrders(0L);
+            emptyModel.setConfirmedOrders(0L);
+            emptyModel.setReturnedOrders(0L);
+            emptyModel.setSuccessOrders(0L);
+            emptyModel.setRevenue(BigDecimal.ZERO);
+            emptyModel.setTrueRevenue(BigDecimal.ZERO);
+            return emptyModel;
+        }
+
+        Object[] row = results.get(0);
+        OrderSumModel sumModel = new OrderSumModel();
+        sumModel.setOrders(row[0] != null ? ((Number) row[0]).longValue() : 0L);
+        sumModel.setConfirmedOrders(row[1] != null ? ((Number) row[1]).longValue() : 0L);
+        sumModel.setReturnedOrders(row[2] != null ? ((Number) row[2]).longValue() : 0L);
+        sumModel.setSuccessOrders(row[3] != null ? ((Number) row[3]).longValue() : 0L);
+        sumModel.setRevenue(row[4] != null ? (BigDecimal) row[4] : BigDecimal.ZERO);
+        sumModel.setTrueRevenue(row[5] != null ? (BigDecimal) row[5] : BigDecimal.ZERO);
+
+        return sumModel;
+    }
+
     public List<OrderQueryByDateModel> reportOrderByDateOfProduct(String departmentId, String productId,
                                                                LocalDate startDate, LocalDate endDate,
                                                                ConfirmOrderWhen confirmOrderWhen, ReturnOrderWhen returnOrderWhen) {
@@ -310,30 +478,34 @@ public class OrderCustomRepository {
         List<String> confirmedStatusWithoutReturned = confirmedStatus.stream().filter(s -> !StringUtils.equals(s, OrderStatus.RETURNED.name())).toList();
 
         String queryString = """
-                SELECT p.product_id                         AS product_id,
-                       TO_CHAR(o.created_at, 'DD/MM/YYYY')  AS order_date,
-                       COUNT(o.order_id)                                                                         AS orders,
-                       SUM(CASE WHEN o.status IN :confirmed_status THEN 1 ELSE 0 END)                            AS confirmed_orders,
-                       SUM(CASE WHEN o.status IN :returned_status THEN 1 ELSE 0 END)                             AS returned_orders,
-                       SUM(CASE WHEN o.status IN :success_status THEN 1 ELSE 0 END)                              AS success_orders,
-                       SUM(CASE WHEN o.status IN :confirmed_status THEN COALESCE(oi.total_price, 0) ELSE 0 END)  AS revenue,
-                       SUM(CASE WHEN o.status in :confirmed_status_without_returned
-                                   THEN COALESCE(oi.total_price, 0)
-                               ELSE 0 END)                                                                       AS true_revenue
-                FROM product_manager.products p
-                         LEFT JOIN product_manager.order_item oi
-                                   ON oi.pos_id = p.pos_id AND oi.product_id = p.product_id
-                         LEFT JOIN product_manager.orders o
-                                   ON o.order_id = oi.order_id
-                                  AND o.department_id = :department_id
-                                  AND o.created_at >= :start_date
-                                  AND o.created_at < :end_date
-                         LEFT JOIN product_manager.pos pos
-                                   ON pos.id = o.pos_id
-                                  AND pos.status IN ('ACTIVE', 'PROCESSING')
-                WHERE p.department_id = :department_id AND p.product_id = :product_id
-                GROUP BY p.product_id, TO_CHAR(o.created_at, 'DD/MM/YYYY')
-                ORDER BY o.created_at;
+                select product_id,
+                       order_date,
+                       SUM(s.total)                                                           AS orders,
+                       SUM(CASE WHEN s.status in :confirmed_status THEN s.total ELSE 0 END)   AS confirmed_orders,
+                       SUM(CASE WHEN s.status in :returned_status THEN s.total ELSE 0 END)    AS returned_orders,
+                       SUM(CASE WHEN s.status in :success_status THEN s.total ELSE 0 END)     AS success_orders,
+                       SUM(CASE WHEN s.status in :confirmed_status THEN s.revenue ELSE 0 END) AS revenue,
+                       SUM(CASE
+                               WHEN s.status in :confirmed_status_without_returned
+                                   THEN s.revenue
+                               ELSE 0 END)                                                    AS true_revenue
+                from (select p.product_id                        as product_id,
+                             TO_CHAR(o.created_at, 'DD/MM/YYYY') AS order_date,
+                             o.status,
+                             COUNT(1)                            AS total,
+                             SUM(oi.total_price)                 AS revenue
+                      from product_manager.products p
+                               left join product_manager.pos pos on p.pos_id = pos.id
+                               left join product_manager.order_item oi on oi.product_id = p.product_id
+                               left join product_manager.orders o on oi.order_id = o.order_id
+                      where pos.department_id = :department_id
+                        and pos.status in ('ACTIVE', 'PROCESSING')
+                        and p.product_id = :product_id
+                        and o.created_at >= :start_date
+                        and o.created_at < :end_date
+                      group by p.product_id, TO_CHAR(o.created_at, 'DD/MM/YYYY'), o.status) s
+                group by s.product_id, s.order_date
+                order by s.order_date;
                 """;
 
         Query query = createNativeQuery(departmentId, startDate, endDate, confirmedStatus, returnedStatus, confirmedStatusWithoutReturned, queryString);
