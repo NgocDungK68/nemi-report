@@ -291,11 +291,8 @@ public class OverviewReportServiceImpl implements OverviewReportService {
     }
 
     @Override
-    public MonthlyReport getMonthlyReport(CurrencyCodeEnum currencyCode) {
+    public MonthlyReport getMonthlyReport(CurrencyCodeEnum currencyCode, LocalDate startDate, LocalDate endDate) {
         try {
-            // get date of month
-            LocalDate startDate = DateUtils.vietnamToday().withDayOfMonth(1);
-            LocalDate endDate = DateUtils.vietnamToday();
 
             // Get order status config
             ReportSettingResponse config = configService.getConfig();

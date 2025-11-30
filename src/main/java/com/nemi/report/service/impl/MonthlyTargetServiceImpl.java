@@ -13,11 +13,15 @@ import com.nemi.report.model.request.overview.MonthlyTargetRequest;
 import com.nemi.report.model.request.overview.UpdateMonthlyTargetRequest;
 import com.nemi.report.model.response.CurrencyRateResponse;
 import com.nemi.report.model.response.overview.MonthlyTargetResponse;
+import com.nemi.report.model.response.overview.ReportSettingResponse;
 import com.nemi.report.repository.MonthlyTargetRepository;
+import com.nemi.report.repository.OrderCustomRepository;
+import com.nemi.report.service.ConfigService;
 import com.nemi.report.service.MonthlyTargetService;
 import com.nemi.report.util.ReportDateUtils;
 import com.nemi.report.util.ValidationUtils;
 import com.nemi.util.ClaimUtil;
+import com.nemi.util.DateUtils;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -42,6 +46,8 @@ public class MonthlyTargetServiceImpl implements MonthlyTargetService {
     private final ClaimUtil claimUtil;
     private final CurrencyRateService currencyRateService;
     private final CurrencyConfig currencyConfig;
+    private final OrderCustomRepository orderCustomRepository;
+    private final ConfigService configService;
 
     private int percentScale;
 
@@ -57,6 +63,11 @@ public class MonthlyTargetServiceImpl implements MonthlyTargetService {
                 claimUtil.getDepartmentId());
 
         try {
+            ReportSettingResponse reportSetting = configService.getConfig();
+
+            // get date of month
+            LocalDate startDate = DateUtils.vietnamToday().withDayOfMonth(1);
+            LocalDate endDate = DateUtils.vietnamToday();
 
             // KPI
             MonthlyTargetId monthlyTargetId = new MonthlyTargetId(claimUtil.getDepartmentId(), request.getCurrency().name());
@@ -66,9 +77,11 @@ public class MonthlyTargetServiceImpl implements MonthlyTargetService {
             BigDecimal targetReturnedOrderPercent = monthlyTargetEntity.map(MonthlyTargetEntity::getReturnedOrderPercent).orElse(BigDecimal.ZERO);
 
             // Get monthly report
-            MonthlyReport monthlyReport = overviewReportService.getMonthlyReport(request.getCurrency());
+            MonthlyReport monthlyReport = overviewReportService.getMonthlyReport(request.getCurrency(), startDate, endDate);
             BigDecimal totalRevenue = monthlyReport.getRevenue();
             BigDecimal revenueToday = monthlyReport.getTodayRevenue();
+
+            Long soldProduct = orderCustomRepository.countSoldProduct(claimUtil.getDepartmentId(), startDate, endDate, reportSetting.getConfirmOrderWhen());
 
             // Build Response
             return MonthlyTargetResponse.builder()
@@ -81,7 +94,7 @@ public class MonthlyTargetServiceImpl implements MonthlyTargetService {
                     .targetAdCostPerRevenue(targetAdCostPerRevenue)
                     .adCostPerOrder(monthlyReport.getAdCostPerOrder())
                     .order(monthlyReport.getOrders())
-                    .soldProduct(0L) // TODO
+                    .soldProduct(soldProduct)
                     .returnedOrder(monthlyReport.getReturnedOrders())
                     .returnedOrderPercent(getReturnedOrderPercent(monthlyReport.getReturnedOrders(), monthlyReport.getOrders()))
                     .targetReturnedOrderPercent(targetReturnedOrderPercent)

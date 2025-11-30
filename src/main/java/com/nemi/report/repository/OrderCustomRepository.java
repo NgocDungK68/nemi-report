@@ -652,4 +652,27 @@ public class OrderCustomRepository {
                         .build())
                 .toList();
     }
+
+    public Long countSoldProduct(String departmentId, LocalDate startDate, LocalDate endDate, ConfirmOrderWhen confirmOrderWhen) {
+        String queryString = """
+                select SUM(oi.quantity) AS quantity
+                        from product_manager.orders o
+                                 left join product_manager.pos pos on o.pos_id = pos.id
+                                 left join product_manager.order_item oi on oi.order_id = o.order_id
+                        where pos.department_id = :department_id
+                          and pos.status in ('ACTIVE', 'PROCESSING')
+                          and o.created_at >= :start_date
+                          and o.created_at < :end_date
+                          and o.status in :confirmed_status
+        """;
+
+        Query query = em.createNativeQuery(queryString);
+
+        query.setParameter("department_id", departmentId);
+        query.setParameter("confirmed_status", confirmOrderWhen.getOrderStatus());
+        query.setParameter("start_date", startDate.atStartOfDay());
+        query.setParameter("end_date", endDate.plusDays(1).atStartOfDay());
+
+        return (Long) query.getSingleResult();
+    }
 }

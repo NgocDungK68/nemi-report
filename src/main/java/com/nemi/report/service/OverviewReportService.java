@@ -9,10 +9,12 @@ import com.nemi.report.model.response.overview.BusinessTodayResponse;
 import com.nemi.report.model.response.overview.CompareChartResponse;
 import com.nemi.report.model.response.overview.OverviewReportResponse;
 
+import java.time.LocalDate;
+
 public interface OverviewReportService {
     OverviewReportResponse getOverviewReport(OverviewReportRequest request);
     CompareChartResponse getCompareChart(CompareChartRequest request);
     BusinessTodayResponse getBusinessToday(BusinessTodayRequest request);
 
-    MonthlyReport getMonthlyReport(CurrencyCodeEnum currencyCode);
+    MonthlyReport getMonthlyReport(CurrencyCodeEnum currencyCode, LocalDate startDate, LocalDate endDate);
 }
