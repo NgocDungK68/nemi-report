@@ -24,7 +24,6 @@ spring:
         dialect: org.hibernate.dialect.PostgreSQLDialect
   config:
     import:
-        - classpath:product-column-config.yml
         - classpath:report-column-config.yml
 
 nemi:

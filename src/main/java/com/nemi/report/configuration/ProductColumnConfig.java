@@ -12,7 +12,7 @@ import java.util.Objects;
 
 @Data
 @Configuration
-@ConfigurationProperties(prefix = "nemi.column-config.product-report")
+@ConfigurationProperties(prefix = "nemi.column-config.product")
 public class ProductColumnConfig {
     private List<String> defaultColumns;
     private List<ColumnCategoryConfig> columnCategories;
