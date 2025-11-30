@@ -5,6 +5,7 @@ import com.nemi.report.model.config.ColumnConfig;
 import com.nemi.report.model.config.SummaryData;
 import com.nemi.report.model.pojo.FullOrderQueryByDateModel;
 import com.nemi.report.model.pojo.OrderQueryByDateModel;
+import com.nemi.report.model.pojo.OrderQueryByHourModel;
 import com.nemi.report.model.pojo.ReportByDateModel;
 import com.nemi.report.model.pojo.ReportModel;
 import com.nemi.report.model.system_manager.ExchangeRateResponse;
@@ -48,16 +49,33 @@ public class ReportHelperService {
     }
 
     public void exchangeRevenueForFullOrders(List<FullOrderQueryByDateModel> orderQueryModel, CurrencyCodeEnum currency, LocalDate startDate, LocalDate endDate) {
-        ExchangeRateResponse exchangeRateResponse = exchangeRateService.getExchangeRate(
-                claimUtil.getCompanyId(),
-                CurrencyCodeEnum.VND.name(),
-                currency.name(),
-                startDate,
-                endDate
-        );
+        if (!orderQueryModel.isEmpty()) {
+            ExchangeRateResponse exchangeRateResponse = exchangeRateService.getExchangeRate(
+                    claimUtil.getCompanyId(),
+                    CurrencyCodeEnum.VND.name(),
+                    currency.name(),
+                    startDate,
+                    endDate
+            );
 
-        Map<String, BigDecimal> rateByDateMap = buildExchangeRateMap(exchangeRateResponse);
-        applyExchangeRatesToFullOrders(orderQueryModel, rateByDateMap, currency);
+            Map<String, BigDecimal> rateByDateMap = buildExchangeRateMap(exchangeRateResponse);
+            applyExchangeRatesToFullOrders(orderQueryModel, rateByDateMap, currency);
+        }
+    }
+
+    public void exchangeRevenueForTodayOrders(List<OrderQueryByHourModel> orderQueryModel, CurrencyCodeEnum currency) {
+        if (!orderQueryModel.isEmpty()) {
+            BigDecimal todayRate = exchangeRateService.getLastExchangeRate(
+                    claimUtil.getCompanyId(),
+                    CurrencyCodeEnum.VND.name(),
+                    currency.name(),
+                    DateUtils.vietnamToday(),
+                    DateUtils.vietnamToday()
+            );
+
+            orderQueryModel.forEach(orderQuery -> orderQuery.setTrueRevenue(CurrencyUtils.exchange(currency, orderQuery.getTrueRevenue(), todayRate)));
+        }
+
     }
 
     public <T extends ReportModel> Object getValueFromReportModel(T reportModel, String code) {
@@ -145,7 +163,7 @@ public class ReportHelperService {
         return 0.0;
     }
 
-    public  <T extends ReportModel> Map<String, Object> buildSummary(List<T> reportModels, List<ColumnConfig> columnConfigs) {
+    public <T extends ReportModel> Map<String, Object> buildSummary(List<T> reportModels, List<ColumnConfig> columnConfigs) {
         Map<String, Object> summary = new HashMap<>();
 
         for (ColumnConfig columnConfig : columnConfigs) {
@@ -204,6 +222,24 @@ public class ReportHelperService {
             reportModel.setSuccessOrders(0L);
             reportModel.setRevenue(BigDecimal.ZERO);
             reportModel.setTrueRevenue(BigDecimal.ZERO);
+        }
+    }
+
+    public void populateFullOrderDataByDate(ReportByDateModel reportModel, FullOrderQueryByDateModel orderQuery) {
+        if (orderQuery != null) {
+            reportModel.setOrders(orderQuery.getOrders());
+            reportModel.setConfirmedOrders(orderQuery.getConfirmedOrders());
+            reportModel.setReturnedOrders(orderQuery.getReturnedOrders());
+            reportModel.setRevenue(orderQuery.getRevenue());
+            reportModel.setTrueRevenue(orderQuery.getTrueRevenue());
+            reportModel.setReturnedRevenue(orderQuery.getReturnedRevenue());
+        } else {
+            reportModel.setOrders(0L);
+            reportModel.setConfirmedOrders(0L);
+            reportModel.setReturnedOrders(0L);
+            reportModel.setRevenue(BigDecimal.ZERO);
+            reportModel.setTrueRevenue(BigDecimal.ZERO);
+            reportModel.setReturnedRevenue(BigDecimal.ZERO);
         }
     }
 

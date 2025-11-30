@@ -45,13 +45,19 @@ public enum OrderStatus {
         );
     }
 
-    public static List<String> getCancelledOrdersStatus() {
+    public static List<String> getPendingOrdersStatus() {
         return List.of(
-                OrderStatus.CANCELLED.getCode()
+                OrderStatus.NEW.getCode(),
+                OrderStatus.PROCESSING.getCode(),
+                OrderStatus.READY_TO_SHIP.getCode()
         );
     }
 
     public static List<String> getSuccessfulOrdersStatus() {
         return List.of(OrderStatus.DELIVERED.getCode());
+    }
+
+    public static List<String> getCanceledOrdersStatus() {
+        return List.of(OrderStatus.CANCELLED.getCode());
     }
 }

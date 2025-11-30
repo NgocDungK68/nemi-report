@@ -19,10 +19,14 @@ public class FullOrderQueryByDateModel {
     private long confirmedOrders;
     private long returnedOrders;
     private long deliveringOrders;
+    private long pendingOrders;
+    private long canceledOrders;
 
     private BigDecimal revenue; // Doanh số ALL
     private BigDecimal trueRevenue; // Doanh thu
     private BigDecimal confirmedRevenue;
     private BigDecimal returnedRevenue;
     private BigDecimal deliveringRevenue;
+    private BigDecimal pendingRevenue;
+    private BigDecimal canceledRevenue;
 }

@@ -5,6 +5,7 @@ import com.nemi.report.constant.OrderStatus;
 import com.nemi.report.constant.ReturnOrderWhen;
 import com.nemi.report.model.pojo.FullOrderQueryByDateModel;
 import com.nemi.report.model.pojo.OrderQueryByDateModel;
+import com.nemi.report.model.pojo.OrderQueryByHourModel;
 import com.nemi.report.model.pojo.OrderQueryByProductModel;
 import com.nemi.report.model.pojo.OrderQueryByUserModel;
 import com.nemi.report.model.pojo.OrderSumModel;
@@ -15,7 +16,6 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.StringUtils;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
 
@@ -37,7 +37,7 @@ public class OrderCustomRepository {
                                                                  ConfirmOrderWhen confirmOrderWhen, ReturnOrderWhen returnOrderWhen) {
         List<String> confirmedStatus = confirmOrderWhen.getOrderStatus();
         List<String> returnedStatus = returnOrderWhen.getOrderStatus();
-        List<String> confirmedStatusWithoutReturned = confirmedStatus.stream().filter(s -> !StringUtils.equals(s, OrderStatus.RETURNED.name())).toList();
+        List<String> confirmedStatusWithoutReturned = confirmedStatus.stream().filter(s -> !returnedStatus.contains(s)).toList();
 
         String queryString = """
                 SELECT s.order_date                                                            AS report_date,
@@ -45,10 +45,14 @@ public class OrderCustomRepository {
                        SUM(CASE WHEN s.status in :confirmed_status THEN s.total ELSE 0 END)    AS confirmed_orders,
                        SUM(CASE WHEN s.status in :returned_status THEN s.total ELSE 0 END)     AS returned_orders,
                        SUM(CASE WHEN s.status in :delivering_status THEN s.total ELSE 0 END)   AS delivering_orders,
+                       SUM(CASE WHEN s.status in :pending_status THEN s.total ELSE 0 END)      AS pending_orders,
+                       SUM(CASE WHEN s.status in :canceled_status THEN s.total ELSE 0 END)      AS canceled_orders,
                        SUM(CASE WHEN s.status in :confirmed_status THEN s.revenue ELSE 0 END)  AS revenue,
                        SUM(CASE WHEN s.status in :confirmed_status THEN s.revenue ELSE 0 END)  AS confirmed_revenue,
                        SUM(CASE WHEN s.status in :returned_status THEN s.revenue ELSE 0 END)   AS returned_revenue,
                        SUM(CASE WHEN s.status in :delivering_status THEN s.revenue ELSE 0 END) AS delivering_revenue,
+                       SUM(CASE WHEN s.status in :pending_status THEN s.revenue ELSE 0 END)    AS pending_revenue,
+                       SUM(CASE WHEN s.status in :canceled_status THEN s.revenue ELSE 0 END)    AS canceled_revenue,
                        SUM(CASE
                                WHEN s.status in :confirmed_status_without_returned THEN s.revenue - coalesce(s.discount, 0)
                                ELSE 0 END)                                                     AS true_revenue
@@ -79,11 +83,15 @@ public class OrderCustomRepository {
                         .confirmedOrders(((Number) row[2]).longValue())
                         .returnedOrders(((Number) row[3]).longValue())
                         .deliveringOrders(((Number) row[4]).longValue())
-                        .revenue((BigDecimal) row[5])
-                        .confirmedRevenue((BigDecimal) row[6])
-                        .returnedRevenue((BigDecimal) row[7])
-                        .deliveringRevenue((BigDecimal) row[8])
-                        .trueRevenue((BigDecimal) row[9])
+                        .pendingOrders(((Number) row[5]).longValue())
+                        .canceledOrders(((Number) row[6]).longValue())
+                        .revenue((BigDecimal) row[7])
+                        .confirmedRevenue((BigDecimal) row[8])
+                        .returnedRevenue((BigDecimal) row[9])
+                        .deliveringRevenue((BigDecimal) row[10])
+                        .pendingRevenue((BigDecimal) row[11])
+                        .canceledRevenue((BigDecimal) row[12])
+                        .trueRevenue((BigDecimal) row[13])
                         .build())
                 .toList();
     }
@@ -93,7 +101,7 @@ public class OrderCustomRepository {
                                                          ConfirmOrderWhen confirmOrderWhen, ReturnOrderWhen returnOrderWhen) {
         List<String> confirmedStatus = confirmOrderWhen.getOrderStatus();
         List<String> returnedStatus = returnOrderWhen.getOrderStatus();
-        List<String> confirmedStatusWithoutReturned = confirmedStatus.stream().filter(s -> !StringUtils.equals(s, OrderStatus.RETURNED.name())).toList();
+        List<String> confirmedStatusWithoutReturned = confirmedStatus.stream().filter(s -> !returnedStatus.contains(s)).toList();
 
         String queryString = """
                 SELECT
@@ -141,6 +149,52 @@ public class OrderCustomRepository {
                 .toList();
     }
 
+    public List<OrderQueryByHourModel> reportOrderByHour(String departmentId,
+                                                         LocalDate startDate, LocalDate endDate,
+                                                         ConfirmOrderWhen confirmOrderWhen, ReturnOrderWhen returnOrderWhen) {
+        List<String> confirmedStatus = confirmOrderWhen.getOrderStatus();
+        List<String> returnedStatus = returnOrderWhen.getOrderStatus();
+        List<String> confirmedStatusWithoutReturned = confirmedStatus.stream().filter(s -> !returnedStatus.contains(s)).toList();
+
+        String queryString = """
+                SELECT s.order_hour        AS report_hour,
+                       SUM(s.total)        AS orders,
+                       SUM(CASE
+                               WHEN s.status in :confirmed_status_without_returned THEN s.revenue - coalesce(s.discount, 0)
+                               ELSE 0 END) AS true_revenue
+                FROM (SELECT TO_CHAR(o.created_at, 'HH24') AS order_hour,
+                             o.status,
+                             COUNT(1)                            AS total,
+                             SUM(o.total_price)                  AS revenue,
+                             SUM(o.discount_amount)              AS discount
+                      FROM product_manager.orders o
+                               left join product_manager.pos p on o.pos_id = p.id
+                      WHERE p.department_id = :department_id
+                        and p.status in ('ACTIVE', 'PROCESSING')
+                        AND o.created_at >= :start_date
+                        AND o.created_at < :end_date
+                      GROUP BY TO_CHAR(o.created_at, 'HH24'), o.status) AS s
+                GROUP BY s.order_hour order by s.order_hour
+                """;
+
+        Query query = em.createNativeQuery(queryString);
+        query.setParameter("department_id", departmentId);
+        query.setParameter("confirmed_status_without_returned", confirmedStatusWithoutReturned);
+        query.setParameter("start_date", startDate.atStartOfDay());
+        query.setParameter("end_date", endDate.plusDays(1).atStartOfDay());
+
+        @SuppressWarnings("unchecked")
+        List<Object[]> results = query.getResultList();
+
+        return results.stream()
+                .map(row -> OrderQueryByHourModel.builder()
+                        .reportHour((Integer) row[0])
+                        .orders(((Number) row[1]).longValue())
+                        .trueRevenue((BigDecimal) row[2])
+                        .build())
+                .toList();
+    }
+
     private Query createNativeQuery(String departmentId, LocalDate startDate, LocalDate endDate, List<String> confirmedStatus, List<String> returnedStatus, List<String> confirmedStatusWithoutReturned, String queryString) {
         Query query = em.createNativeQuery(queryString);
         query.setParameter("department_id", departmentId);
@@ -160,6 +214,8 @@ public class OrderCustomRepository {
         query.setParameter("confirmed_status", confirmedStatus);
         query.setParameter("returned_status", returnedStatus);
         query.setParameter("delivering_status", OrderStatus.getDeliveringOrdersStatus());
+        query.setParameter("pending_status", OrderStatus.getPendingOrdersStatus());
+        query.setParameter("canceled_status", OrderStatus.getCanceledOrdersStatus());
         query.setParameter("confirmed_status_without_returned", confirmedStatusWithoutReturned);
         query.setParameter("start_date", startDate.atStartOfDay());
         query.setParameter("end_date", endDate.plusDays(1).atStartOfDay());
@@ -173,7 +229,7 @@ public class OrderCustomRepository {
                                                          ConfirmOrderWhen confirmOrderWhen, ReturnOrderWhen returnOrderWhen) {
         List<String> confirmedStatus = confirmOrderWhen.getOrderStatus();
         List<String> returnedStatus = returnOrderWhen.getOrderStatus();
-        List<String> confirmedStatusWithoutReturned = confirmedStatus.stream().filter(s -> !StringUtils.equals(s, OrderStatus.RETURNED.name())).toList();
+        List<String> confirmedStatusWithoutReturned = confirmedStatus.stream().filter(s -> !returnedStatus.contains(s)).toList();
 
         StringBuilder queryString = new StringBuilder("""
                 select u.id as user_id,
@@ -253,7 +309,7 @@ public class OrderCustomRepository {
                                                                ConfirmOrderWhen confirmOrderWhen, ReturnOrderWhen returnOrderWhen) {
         List<String> confirmedStatus = confirmOrderWhen.getOrderStatus();
         List<String> returnedStatus = returnOrderWhen.getOrderStatus();
-        List<String> confirmedStatusWithoutReturned = confirmedStatus.stream().filter(s -> !StringUtils.equals(s, OrderStatus.RETURNED.name())).toList();
+        List<String> confirmedStatusWithoutReturned = confirmedStatus.stream().filter(s -> !returnedStatus.contains(s)).toList();
 
         String queryString = """
                 select upl.user_id                                                            AS user_id,
@@ -311,7 +367,7 @@ public class OrderCustomRepository {
                                                                ConfirmOrderWhen confirmOrderWhen, ReturnOrderWhen returnOrderWhen) {
         List<String> confirmedStatus = confirmOrderWhen.getOrderStatus();
         List<String> returnedStatus = returnOrderWhen.getOrderStatus();
-        List<String> confirmedStatusWithoutReturned = confirmedStatus.stream().filter(s -> !StringUtils.equals(s, OrderStatus.RETURNED.name())).toList();
+        List<String> confirmedStatusWithoutReturned = confirmedStatus.stream().filter(s -> !returnedStatus.contains(s)).toList();
 
         StringBuilder queryString = new StringBuilder("""
                 select *
@@ -389,7 +445,7 @@ public class OrderCustomRepository {
                                           ConfirmOrderWhen confirmOrderWhen, ReturnOrderWhen returnOrderWhen) {
         List<String> confirmedStatus = confirmOrderWhen.getOrderStatus();
         List<String> returnedStatus = returnOrderWhen.getOrderStatus();
-        List<String> confirmedStatusWithoutReturned = confirmedStatus.stream().filter(s -> !StringUtils.equals(s, OrderStatus.RETURNED.name())).toList();
+        List<String> confirmedStatusWithoutReturned = confirmedStatus.stream().filter(s -> !returnedStatus.contains(s)).toList();
 
         StringBuilder queryString = new StringBuilder("""
                 select count(1) from (select *
@@ -453,7 +509,7 @@ public class OrderCustomRepository {
                                                  ConfirmOrderWhen confirmOrderWhen, ReturnOrderWhen returnOrderWhen) {
         List<String> confirmedStatus = confirmOrderWhen.getOrderStatus();
         List<String> returnedStatus = returnOrderWhen.getOrderStatus();
-        List<String> confirmedStatusWithoutReturned = confirmedStatus.stream().filter(s -> !StringUtils.equals(s, OrderStatus.RETURNED.name())).toList();
+        List<String> confirmedStatusWithoutReturned = confirmedStatus.stream().filter(s -> !returnedStatus.contains(s)).toList();
 
         StringBuilder queryString = new StringBuilder("""
                 select SUM(final.orders)           as orders,
@@ -545,7 +601,7 @@ public class OrderCustomRepository {
                                                                ConfirmOrderWhen confirmOrderWhen, ReturnOrderWhen returnOrderWhen) {
         List<String> confirmedStatus = confirmOrderWhen.getOrderStatus();
         List<String> returnedStatus = returnOrderWhen.getOrderStatus();
-        List<String> confirmedStatusWithoutReturned = confirmedStatus.stream().filter(s -> !StringUtils.equals(s, OrderStatus.RETURNED.name())).toList();
+        List<String> confirmedStatusWithoutReturned = confirmedStatus.stream().filter(s -> !returnedStatus.contains(s)).toList();
 
         String queryString = """
                 select product_id,

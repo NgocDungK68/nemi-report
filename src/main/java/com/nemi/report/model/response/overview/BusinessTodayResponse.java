@@ -48,7 +48,7 @@ public class BusinessTodayResponse {
         private BigDecimal revenue;
 
         @JsonProperty("orders")
-        private BigDecimal orders;
+        private Long orders;
     }
 
     @Data

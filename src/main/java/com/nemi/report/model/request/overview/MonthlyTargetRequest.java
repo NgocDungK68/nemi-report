@@ -1,6 +1,6 @@
 package com.nemi.report.model.request.overview;
 
-import com.nemi.report.constant.Currency;
+import com.nemi.constant.CurrencyCodeEnum;
 import lombok.Data;
 
 import jakarta.validation.constraints.NotNull;
@@ -9,5 +9,5 @@ import jakarta.validation.constraints.NotNull;
 public class MonthlyTargetRequest {
 
     @NotNull
-    private Currency currency; // VND/USD
+    private CurrencyCodeEnum currency; // VND/USD
 }
