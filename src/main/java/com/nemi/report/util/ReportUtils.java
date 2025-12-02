@@ -67,7 +67,18 @@ public class ReportUtils {
         return BigDecimal.ZERO;
     }
 
-    public static int calculateTotalPages(int totalElements, int size) {
+    public static int calculateTotalPages(long totalElements, int size) {
         return (int) Math.ceil(totalElements / (double) size);
+    }
+
+    public static int compareValues(Object value1, Object value2) {
+        if (value1 instanceof BigDecimal bd1 && value2 instanceof BigDecimal bd2) {
+            return bd1.compareTo(bd2);
+        } else if (value1 instanceof Long l1 && value2 instanceof Long l2) {
+            return l1.compareTo(l2);
+        } else if (value1 instanceof Double d1 && value2 instanceof Double d2) {
+            return d1.compareTo(d2);
+        }
+        return 0;
     }
 }

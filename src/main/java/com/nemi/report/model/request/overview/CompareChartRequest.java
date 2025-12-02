@@ -1,9 +1,9 @@
 package com.nemi.report.model.request.overview;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.nemi.constant.CurrencyCodeEnum;
 import com.nemi.report.constant.CompareWithType;
-import com.nemi.report.constant.Currency;
-import com.nemi.report.constant.OverviewDataType;
+import com.nemi.report.constant.OverviewChartType;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
@@ -23,8 +23,8 @@ public class CompareChartRequest {
     private CompareWithType compareWith; // L7D, L1M, L2M, L3M, LY
 
     @NotNull
-    private Currency currency; // VND/USD
+    private CurrencyCodeEnum currency; // VND/USD
 
     @NotNull
-    private OverviewDataType dataType; // REVENUE, AD_COST, AD_COST_PER_REVENUE, RETURNED_ORDER, PROFIT
+    private OverviewChartType dataType;
 }

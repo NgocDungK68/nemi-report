@@ -38,36 +38,26 @@ public enum OrderStatus {
         );
     }
 
-    public static List<String> getReturnedOrdersStatus() {
+    public static List<String> getDeliveringOrdersStatus() {
         return List.of(
-                OrderStatus.RETURNED.getCode(),
-                OrderStatus.CANCELLED.getCode(),
-                OrderStatus.FAILED.getCode()
-        );
-    }
-
-    public static List<String> getConfirmedOrdersStatus() {
-        return List.of(
-                OrderStatus.DELIVERED.getCode(),
                 OrderStatus.SHIPPING.getCode(),
                 OrderStatus.READY_TO_SHIP.getCode()
         );
     }
 
-    public static List<String> getDeliveringOrdersStatus() {
+    public static List<String> getPendingOrdersStatus() {
         return List.of(
-                OrderStatus.DELIVERED.getCode()
-        );
-    }
-
-    public static List<String> getCancelledOrdersStatus() {
-        return List.of(
-                OrderStatus.CANCELLED.getCode(),
-                OrderStatus.FAILED.getCode()
+                OrderStatus.NEW.getCode(),
+                OrderStatus.PROCESSING.getCode(),
+                OrderStatus.READY_TO_SHIP.getCode()
         );
     }
 
     public static List<String> getSuccessfulOrdersStatus() {
         return List.of(OrderStatus.DELIVERED.getCode());
+    }
+
+    public static List<String> getCanceledOrdersStatus() {
+        return List.of(OrderStatus.CANCELLED.getCode());
     }
 }

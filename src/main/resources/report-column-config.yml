@@ -131,6 +131,7 @@ nemi:
               mapping: ad_cost_per_revenue
               hasFilter: true
               summary-type: AVG
+
     marketing-report:
       default-columns:
         - revenue
@@ -241,7 +242,8 @@ nemi:
               source: ADS
               is-cost: true
               mapping: ad_cost
-              hasFilter: true
+              hasFilter: false
+              has-order: false
               summary-type: SUM
 
             - code: ad_cost_per_order
@@ -251,7 +253,8 @@ nemi:
               source: ADS
               is-cost: true
               mapping: ad_cost_per_order
-              hasFilter: true
+              hasFilter: false
+              has-order: false
               summary-type: AVG
 
             - code: ads_cost_per_confirmed_order
@@ -261,7 +264,8 @@ nemi:
               source: ADS
               is-cost: true
               mapping: ads_cost_per_confirmed_order
-              hasFilter: true
+              hasFilter: false
+              has-order: false
               summary-type: AVG
 
             - code: ad_cost_per_revenue
@@ -271,36 +275,37 @@ nemi:
               source: ADS
               is-percent: true
               mapping: ad_cost_per_revenue
-              hasFilter: true
+              hasFilter: false
+              has-order: false
               summary-type: AVG
 
-    staff-report:
+    product:
       default-columns:
         - revenue
         - orders
         - ad_cost
-        - ad_cost_per_revenue
+        - ad_cost_to_revenue
         - ad_cost_per_order
         - confirmed_orders
         - returned_orders
-        - success_orders
+        - successful_orders
         - profit
 
       system-views:
-        - code: overview
-          title-en: "Overview"
-          title-vi: "Tổng quan"
+        - code: performance
+          title-en: "Product Performance"
+          title-vi: "Hiệu quả sản phẩm"
           columns:
+            - product_name
             - revenue
             - orders
             - ad_cost
-            - ad_cost_per_revenue
+            - ad_cost_to_revenue
             - ad_cost_per_order
             - confirmed_orders
             - returned_orders
-            - success_orders
+            - successful_orders
             - profit
-
       column-categories:
         - categoryNameEn: "Revenue"
           categoryNameVi: "Doanh số"
@@ -427,7 +432,8 @@ nemi:
               hasFilter: false
               has-order: false
               summary-type: AVG
-    product-report:
+
+    staff-report:
       default-columns:
         - revenue
         - orders

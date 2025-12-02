@@ -258,7 +258,7 @@ public class StaffReportServiceImpl implements StaffReportService {
                 .sorted((m1, m2) -> {
                     Object v1 = reportHelperService.getValueFromReportModel(m1, columnChart.getCode());
                     Object v2 = reportHelperService.getValueFromReportModel(m2, columnChart.getCode());
-                    return compareValues(v2, v1); // DESC
+                    return ReportUtils.compareValues(v2, v1); // DESC
                 })
                 .limit(limit.getValue())
                 .toList();
@@ -582,21 +582,10 @@ public class StaffReportServiceImpl implements StaffReportService {
                 .sorted((r1, r2) -> {
                     Object value1 = reportHelperService.getValueFromReportModel(r1, code);
                     Object value2 = reportHelperService.getValueFromReportModel(r2, code);
-                    return compareValues(value2, value1); // DESC order
+                    return ReportUtils.compareValues(value2, value1); // DESC order
                 })
                 .limit(limit.getValue())
                 .toList();
-    }
-
-    private int compareValues(Object value1, Object value2) {
-        if (value1 instanceof BigDecimal bd1 && value2 instanceof BigDecimal bd2) {
-            return bd1.compareTo(bd2);
-        } else if (value1 instanceof Long l1 && value2 instanceof Long l2) {
-            return l1.compareTo(l2);
-        } else if (value1 instanceof Double d1 && value2 instanceof Double d2) {
-            return d1.compareTo(d2);
-        }
-        return 0;
     }
 
     private StaffsChartResponse buildStaffsChartResponse(List<ReportByUserModel> topUsers, List<ReportByUserModel> allUsers, ColumnConfig columnChart, StaffChartRequest request) {

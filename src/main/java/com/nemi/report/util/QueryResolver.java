@@ -164,4 +164,10 @@ public class QueryResolver {
                 .map(column -> String.format("%s.%s %s NULLS LAST", table, column.getCode(), column.getOrder()))
                 .collect(Collectors.joining(", "));
     }
+
+    public static String toGroup(String table, List<ColumnRequest> columns) {
+        return columns.stream()
+                .map(col -> table + "." + col.getCode())
+                .collect(Collectors.joining(", "));
+    }
 }

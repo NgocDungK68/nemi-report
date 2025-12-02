@@ -1,8 +1,8 @@
 package com.nemi.report.model.request.overview;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.nemi.constant.CurrencyCodeEnum;
 import com.nemi.report.constant.CompareWithType;
-import com.nemi.report.constant.Currency;
 import lombok.Data;
 
 import jakarta.validation.constraints.NotNull;
@@ -22,5 +22,5 @@ public class OverviewReportRequest {
     private CompareWithType compareWith; // L7D, L1M, L2M, L3M, LY
 
     @NotNull
-    private Currency currency; // VND/USD
+    private CurrencyCodeEnum currency; //
 }

@@ -18,9 +18,6 @@ public class CompareChartResponse {
     @JsonProperty("data")
     private List<ChartDataPoint> data;
 
-    @JsonProperty("columnLegend")
-    private String columnLegend;
-
     @Data
     @Builder
     @AllArgsConstructor
@@ -28,6 +25,8 @@ public class CompareChartResponse {
     public static class ChartDataPoint {
         @JsonProperty("date")
         private String date; // dd/MM/yyyy
+
+        private String previousDate; // dd/MM/yyyy
 
         @JsonProperty("presentValue")
         private BigDecimal presentValue;
@@ -38,25 +37,7 @@ public class CompareChartResponse {
         @JsonProperty("changePercent")
         private BigDecimal changePercent;
 
-        @JsonProperty("additions")
-        private List<Addition> additions;
-    }
-
-    @Data
-    @Builder
-    @AllArgsConstructor
-    @NoArgsConstructor
-    public static class Addition {
-        @JsonProperty("order")
-        private Integer order;
-
-        @JsonProperty("titleEn")
-        private String titleEn;
-
-        @JsonProperty("titleVi")
-        private String titleVi;
-
-        @JsonProperty("value")
-        private String value;
+        @JsonProperty("orders")
+        private Long orders;
     }
 }

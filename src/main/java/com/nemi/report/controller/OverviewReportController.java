@@ -1,9 +1,9 @@
 package com.nemi.report.controller;
 
 import com.nemi.annotation.RequirePermission;
+import com.nemi.constant.CurrencyCodeEnum;
 import com.nemi.report.constant.CompareWithType;
-import com.nemi.report.constant.Currency;
-import com.nemi.report.constant.OverviewDataType;
+import com.nemi.report.constant.OverviewChartType;
 import com.nemi.report.model.request.overview.BusinessTodayRequest;
 import com.nemi.report.model.request.overview.CompareChartRequest;
 import com.nemi.report.model.request.overview.UpdateReportSettingRequest;
@@ -15,8 +15,6 @@ import com.nemi.report.model.response.overview.CompareChartResponse;
 import com.nemi.report.model.response.overview.ReportSettingResponse;
 import com.nemi.report.model.response.overview.MonthlyTargetResponse;
 import com.nemi.report.model.response.overview.OverviewReportResponse;
-import com.nemi.report.service.BusinessTodayService;
-import com.nemi.report.service.CompareChartService;
 import com.nemi.report.service.ConfigService;
 import com.nemi.report.service.MonthlyTargetService;
 import com.nemi.report.service.impl.OverviewReportServiceImpl;
@@ -38,8 +36,6 @@ import java.time.LocalDate;
 @RequiredArgsConstructor
 public class OverviewReportController {
     private final OverviewReportServiceImpl overviewReportService;
-    private final CompareChartService compareChartService;
-    private final BusinessTodayService businessTodayService;
     private final MonthlyTargetService monthlyTargetService;
     private final ConfigService configService;
 
@@ -49,7 +45,7 @@ public class OverviewReportController {
             @RequestParam("from") @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate from,
             @RequestParam("to") @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate to,
             @RequestParam(value = "compareWith", required = false) CompareWithType compareWith,
-            @RequestParam("currency") Currency currency) {
+            @RequestParam("currency") CurrencyCodeEnum currency) {
 
         OverviewReportRequest request = new OverviewReportRequest();
         request.setFrom(from);
@@ -61,14 +57,14 @@ public class OverviewReportController {
         return ResponseEntity.ok(response);
     }
 
-//    @RequirePermission("REPORTING.OVERVIEW_REPORT.VIEW")
+    @RequirePermission("REPORTING.OVERVIEW_REPORT.VIEW")
     @GetMapping("/compare-chart")
     public ResponseEntity<CompareChartResponse> getCompareChart(
             @RequestParam("from") @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate from,
             @RequestParam("to") @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate to,
             @RequestParam(value = "compareWith", required = false) CompareWithType compareWith,
-            @RequestParam("currency") Currency currency,
-            @RequestParam("dataType") OverviewDataType dataType) {
+            @RequestParam("currency") CurrencyCodeEnum currency,
+            @RequestParam("dataType") OverviewChartType dataType) {
 
         CompareChartRequest request = new CompareChartRequest();
         request.setFrom(from);
@@ -77,26 +73,26 @@ public class OverviewReportController {
         request.setCurrency(currency);
         request.setDataType(dataType);
 
-        CompareChartResponse response = compareChartService.getCompareChart(request);
+        CompareChartResponse response = overviewReportService.getCompareChart(request);
         return ResponseEntity.ok(response);
     }
 
     @RequirePermission("REPORTING.OVERVIEW_REPORT.VIEW")
     @GetMapping("/business-today")
     public ResponseEntity<BusinessTodayResponse> getBusinessToday(
-            @RequestParam("currency") Currency currency) {
+            @RequestParam("currency") CurrencyCodeEnum currency) {
 
         BusinessTodayRequest request = new BusinessTodayRequest();
         request.setCurrency(currency);
-        BusinessTodayResponse response = businessTodayService.getBusinessToday(request);
+        BusinessTodayResponse response = overviewReportService.getBusinessToday(request);
 
         return ResponseEntity.ok(response);
     }
 
-//    @RequirePermission("REPORTING.OVERVIEW_REPORT.VIEW")
+    @RequirePermission("REPORTING.OVERVIEW_REPORT.VIEW")
     @GetMapping("/monthly-target")
     public ResponseEntity<MonthlyTargetResponse> getMonthlyTarget(
-            @RequestParam("currency") Currency currency) {
+            @RequestParam("currency") CurrencyCodeEnum currency) {
 
         MonthlyTargetRequest request = new MonthlyTargetRequest();
         request.setCurrency(currency);

@@ -11,19 +11,10 @@ import java.math.BigDecimal;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class OrderQueryByProductModel {
+public class OrderQueryByHourModel {
 
-    // product
-    private String productId;
-    private String name;
-    private String image;
-
-    // order
+    private int reportHour;
     private long orders;
-    private long confirmedOrders;
-    private long returnedOrders;
-    private long successOrders;
 
-    private BigDecimal revenue; // Doanh số
     private BigDecimal trueRevenue; // Doanh thu
 }

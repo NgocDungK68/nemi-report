@@ -39,13 +39,13 @@ public class MonthlyTargetResponse {
     private BigDecimal adCostPerOrder;
 
     @JsonProperty("order")
-    private BigDecimal order;
+    private Long order;
 
     @JsonProperty("soldProduct")
-    private BigDecimal soldProduct;
+    private Long soldProduct;
 
     @JsonProperty("returnedOrder")
-    private BigDecimal returnedOrder;
+    private Long returnedOrder;
 
     @JsonProperty("returnedOrderPercent")
     private BigDecimal returnedOrderPercent;

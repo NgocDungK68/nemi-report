@@ -7,10 +7,13 @@ import com.nemi.report.model.response.product.ProductDailyResponse;
 import com.nemi.report.model.response.product.ProductSummaryResponse;
 import com.nemi.report.model.response.product.ProductsChartResponse;
 
-public interface ProductSummaryService {
+public interface ProductReportService {
 
     ProductSummaryResponse getProductSummary(ReportSummaryRequest request);
-    ProductDailyResponse getProductDaily(ReportSummaryRequest request, String productId);
+
+    ProductDailyResponse getProductDaily(String productId, ReportSummaryRequest request);
+
     ProductsChartResponse getAllProductsChart(ProductChartRequest request);
+
     ProductChartResponse getProductChart(String productId, ProductChartRequest request);
 }

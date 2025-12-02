@@ -30,6 +30,9 @@ public class ReportValidator {
     public static List<ColumnRequest> getValidOrders(List<ColumnRequest> orders, List<ColumnConfig> columns) {
         return orders.stream()
                 .filter(order -> {
+                    if (Objects.isNull(order.getOrder())) {
+                        return false;
+                    }
                     ColumnConfig column = getColumnByCode(columns, order.getCode());
                     return Objects.nonNull(column) && column.getHasOrder();
                 }).toList();
